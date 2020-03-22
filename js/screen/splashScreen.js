@@ -19,7 +19,7 @@ class splashScreen extends Component {
   render() {
     return (
       <View style={styles.container}>
-        <Image source={{ uri: "asset:/logo.png" }} style={styles.imageAcaraKosong} />
+        <Image source={require('../asset/logo.png')} style={{ height: 80, width: 350 }} />
       </View>
     )
   }
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
 });
 
 const mapDispatchToProps = {
-  setDataUser
+  // setDataUser
 }
 
 export default connect(null, mapDispatchToProps)(splashScreen)

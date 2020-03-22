@@ -6,31 +6,21 @@
  * @flow
  */
 import React from 'react'
+import { Provider } from 'react-redux'
+import store from './js/store'
+
+import SplashScreen from './js/screen/splashScreen';
+import LoginScreen from './js/screen/loginScreen';
+import DashboardScreen from './js/screen/dashboardScreen';
+import AddVisitScreen from './js/screen/addVisit';
 
 import {
-  SafeAreaView,
   StyleSheet,
-  ScrollView,
-  View,
-  Image,
-  StatusBar,
-  Text
 } from 'react-native';
 
-import {
-  Header,
-  LearnMoreLinks,
-  Colors,
-  DebugInstructions,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
-
 const App: () => React$Node = () => {
-  return (
-    <View style={styles.container}>
-      <Image source={require('./js/asset/logo.png')} style={{ height: 80, width: 350 }} />
-    </View>
-  );
+  // const Router = createAppContainer(StackNav)
+  return <Provider store={store}><AddVisitScreen /></Provider>
 };
 
 const styles = StyleSheet.create({
