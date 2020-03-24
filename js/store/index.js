@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-community/async-storage';
 import { API } from '../../config/API';
 
 const api = store => next => async action => {
-  let token = await AsyncStorage.getItem('token')
+  let token = await AsyncStorage.getItem('token_bhn_md')
 
   // if (action.type === 'FETCH_DATA_EVENT') {
 

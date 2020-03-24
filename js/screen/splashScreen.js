@@ -14,7 +14,7 @@ class splashScreen extends Component {
 
   componentDidMount() {
     setTimeout(async () => {
-      let token = await AsyncStorage.getItem('token')
+      let token = await AsyncStorage.getItem('token_bhn_md')
       if (token) {
 
         API.get('/user/check-token', { headers: { token } })

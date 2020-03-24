@@ -64,13 +64,16 @@ class LoginScreen extends Component {
 
         let dataUser = {
           user_id: data.data.user_id,
-          token: data.data.token,
+          name: data.data.name,
+          role_id: data.data.role_id
         }
         await this.props.setDataUser(dataUser)
 
-        AsyncStorage.multiSet([['token', data.data.token], ['user_id', String(data.data.user_id)]], () => {
-          this.props.navigation.navigate("Dashboard")
-        })
+        await AsyncStorage.set('token_bhn_md', data.data.token)
+        this.props.navigation.navigate("Dashboard")
+        // await AsyncStorage.multiSet([['token_bhn_md', data.data.token], ['user_id', String(data.data.user_id)]], () => {
+        //   this.props.navigation.navigate("Dashboard")
+        // })
 
       }
     } catch (err) {

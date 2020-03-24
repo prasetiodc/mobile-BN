@@ -3,10 +3,10 @@ import { connect } from 'react-redux';
 import AsyncStorage from '@react-native-community/async-storage';
 
 import { Text, View, StyleSheet, SafeAreaView, ScrollView, TouchableHighlight, Dimensions, Image, RefreshControl, BackHandler, Linking } from 'react-native';
-import { Icon, Badge, Input, Item, Form, List, ListItem, Picker, Label } from 'native-base';
+import { Icon, Badge, Input, Item, Form, List, ListItem, Picker, Label, Button } from 'native-base';
 import Popover from 'react-native-popover-view'
 import { ProgressSteps, ProgressStep } from 'react-native-progress-steps';
-// import ImagePicker from 'react-native-image-picker';
+import ImagePicker from 'react-native-image-picker';
 // import Camera from 'react-native-camera'
 
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
@@ -129,7 +129,7 @@ class addVisit extends Component {
 
   fetchData = async () => {
     try {
-      let token = await AsyncStorage.getItem('token')
+      let token = await AsyncStorage.getItem('token_bhn_md')
       let allRetailer = await API.get('/retailer', { headers: { token } })
       let allStore = await API.get('/store', { headers: { token } })
 
@@ -146,7 +146,7 @@ class addVisit extends Component {
 
   fetchNotif = async () => {
     try {
-      let token = await AsyncStorage.getItem('token')
+      let token = await AsyncStorage.getItem('token_bhn_md')
       let allNotif = await API.get('/notification', { headers: { token } })
 
       let newNotif = await allNotif.data.data.find(element => Number(element.read) === 0)
@@ -195,12 +195,8 @@ class addVisit extends Component {
   submit = async () => {
 
     try {
-      let token = await AsyncStorage.getItem('token')
+      let token = await AsyncStorage.getItem('token_bhn_md')
       var formData = new FormData();
-
-      formData.append("files", this.state.img_store, 'img_store')
-      formData.append("files", this.state.img_fixture_in, 'img_fixture_in')
-      formData.append("files", this.state.img_fixture_out, 'img_fixture_out')
 
       formData.append("visit_date", `${new Date()}`)
       formData.append("user_id", this.props.user_id)
@@ -235,18 +231,37 @@ class addVisit extends Component {
       formData.append("q2", this.state.aktifPOR.toLowerCase() === "iya" ? 1 : 0)
       formData.append("q3", this.state.changeCardGift.toLowerCase() === "iya" ? 1 : 0)
 
+      console.log("PROSES 1")
+
+      this.state.img_store && formData.append("files", {
+        name: 'img_store.jpg',
+        type: 'image/jpeg',
+        uri: this.state.img_store.uri
+      })
+
+      this.state.img_fixture_in && formData.append("files", {
+        name: 'img_fixture_in.jpg',
+        type: 'image/jpeg',
+        uri: this.state.img_fixture_in.uri
+      })
+
+
+      // formData.append("files", this.state.img_store, 'img_store')
+      // formData.append("files", this.state.img_fixture_in, 'img_fixture_in')
+      // formData.append("files", this.state.img_fixture_out, 'img_fixture_out')
+      console.log("PROSES 2")
+
       // formData.append("q4", req.body.q4)
       API.post('/visit', formData,
         {
           headers: {
-            "Content-Type": "multipart/form-data",
             token
-          }
+          },
         }
       )
         .then(data => {
           this.resetForm()
-          this.props.navigation.goBack()
+          this.props.navigation.navigate('Dashboard')
         })
         .catch(err => {
           console.log(err)
@@ -258,6 +273,25 @@ class addVisit extends Component {
     }
   }
 
+  launchCamera = (args) => {
+    const options = {
+      noData: true,
+    }
+    ImagePicker.launchCamera(options, (response) => {
+      if (response.uri) {
+        console.log(response)
+        this.setState({
+          img_store: response
+          // filePath: response,
+          // fileData: response.data,
+          // fileUri: response.uri
+        });
+
+      }
+    });
+
+  }
+
   selectImage = () => {
     const options = {
       noData: true,
@@ -265,7 +299,8 @@ class addVisit extends Component {
 
     ImagePicker.launchImageLibrary(options, response => {
       if (response.uri) {
-        this.setState({ thumbnail: response })
+        console.log(response)
+        this.setState({ img_store: response })
       }
     })
 
@@ -379,7 +414,7 @@ class addVisit extends Component {
                           onValueChange={this.onValueChangeRetailer.bind(this)}
                         >
                           {
-                            this.state.dataAllRetailer.map(el =>
+                            this.state.dataAllRetailer.length > 0 && this.state.dataAllRetailer.map(el =>
                               <Picker.Item label={el.initial} value={el.id} key={`${el.id}${el.initial}`} />
                             )
                           }
@@ -436,22 +471,12 @@ class addVisit extends Component {
                     </View>
                     <View id="foto" style={{ marginBottom: 15 }}>
                       <Label>Image Store</Label>
-                      {/* <Input
-                        value="BELUM"
-                        style={{ backgroundColor: '#F0F0F0' }}
-                        disabled /> */}
-                      {/* <Camera
-                        ref={(cam) => {
-                          this.camera = cam
-                        }}
-                        style={styles.view}
-                        >
-                        <Text
-                          style={styles.capture}
-                          onPress={this.takePicture.bind(this)}>
-                          [CAPTURE_IMAGE]
-                        </Text>
-                      </Camera> */}
+                      <Button onPress={this.launchCamera}>
+                        <Text>Take Photo</Text>
+                      </Button>
+                      <Button onPress={this.selectImage}>
+                        <Text>Take Image</Text>
+                      </Button>
                     </View>
                     {/* <Item>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>

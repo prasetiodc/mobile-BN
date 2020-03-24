@@ -88,9 +88,8 @@ class DashboardScreen extends Component {
   }
 
   fetchNotif = async () => {
-    // let token = await AsyncStorage.getItem('token')
     try {
-      let token = await AsyncStorage.getItem('token')
+      let token = await AsyncStorage.getItem('token_bhn_md')
       let allNotif = await API.get('/notification', { headers: { token } })
 
       let newNotif = await allNotif.data.data.find(element => Number(element.read) === 0)
@@ -107,7 +106,7 @@ class DashboardScreen extends Component {
 
   fetchData = async () => {
     try {
-      let token = await AsyncStorage.getItem('token')
+      let token = await AsyncStorage.getItem('token_bhn_md')
       let allVisit = await API.get('/visit?page=1', { headers: { token } })
 
       this.setState({
@@ -157,7 +156,7 @@ class DashboardScreen extends Component {
 
   handleOpenNotif = async (id, url) => {
     try {
-      // let token = await AsyncStorage.getItem('token')
+      // let token = await AsyncStorage.getItem('token_bhn_md')
 
       // let updateNotif = await API.put(`/notification/${id}`, { headers: { token } })
 
@@ -173,7 +172,7 @@ class DashboardScreen extends Component {
 
   fetchDataLoadMore = async () => {
     try {
-      let token = await AsyncStorage.getItem('token')
+      let token = await AsyncStorage.getItem('token_bhn_md')
       let getData = await API.get(`/visit?page=${this.state.page}`, { headers: { token } })
       let hasilSearch
 
