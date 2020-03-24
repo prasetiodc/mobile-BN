@@ -5,9 +5,13 @@
  * @format
  * @flow
  */
+import 'react-native-gesture-handler';
 import React from 'react'
 import { Provider } from 'react-redux'
 import store from './js/store'
+
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 
 import SplashScreen from './js/screen/splashScreen';
 import LoginScreen from './js/screen/loginScreen';
@@ -18,9 +22,31 @@ import {
   StyleSheet,
 } from 'react-native';
 
+const Stack = createStackNavigator();
+
+function MyStack() {
+  return (
+    <Stack.Navigator
+      initialRouteName="Splash"
+      screenOptions={{
+        headerShown: false
+      }}>
+      <Stack.Screen name="Splash" component={SplashScreen}
+        options={{
+          header: null
+        }} />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Dashboard" component={DashboardScreen} />
+      <Stack.Screen name="AddVisit" component={AddVisitScreen} />
+    </Stack.Navigator>
+  );
+}
 const App: () => React$Node = () => {
-  // const Router = createAppContainer(StackNav)
-  return <Provider store={store}><AddVisitScreen /></Provider>
+  return <Provider store={store}>
+    <NavigationContainer>
+      <MyStack />
+    </NavigationContainer>
+  </Provider>
 };
 
 const styles = StyleSheet.create({

@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
-import { StyleSheet, TouchableHighlight, Image, View, Dimensions, ScrollView, ActivityIndicator, Linking, BackHandler, } from 'react-native';
-import { Item, Input, Text, Label } from 'native-base';
+import { StyleSheet, TouchableHighlight, Image, View, Dimensions, ScrollView, ActivityIndicator, Linking, BackHandler } from 'react-native';
+import { Item, Input, Text, Label, Button } from 'native-base';
 import { API } from '../../config/API';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import SimpleLineIcons from 'react-native-vector-icons/SimpleLineIcons';
@@ -8,9 +8,13 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import AsyncStorage from '@react-native-community/async-storage';
 import { connect } from 'react-redux';
 import { setDataUser } from '../store/action';
+import { useIsFocused } from '@react-navigation/native';
+import { set } from 'react-native-reanimated';
+
 // import { withNavigationFocus } from 'react-navigation';
 
-class login extends Component {
+class LoginScreen extends Component {
+
   constructor(props) {
     super(props);
     this.state = {
@@ -31,7 +35,7 @@ class login extends Component {
   }
 
   handleBackPress = () => {
-    if (this.props.isFocused === true && this.props.navigation.state.routeName === 'Login') {
+    if (this.props.isFocused === true) {
       BackHandler.exitApp()
     }
   }
@@ -57,21 +61,16 @@ class login extends Component {
           email: '',
           password: ''
         })
-        alert("Sukses")
 
-        // let dataUser = {
-        //   user_id: data.data.user_id,
-        //   token: data.data.token,
-        // }
-        // await this.props.setDataUser(dataUser)
+        let dataUser = {
+          user_id: data.data.user_id,
+          token: data.data.token,
+        }
+        await this.props.setDataUser(dataUser)
 
-        // AsyncStorage.multiSet([['token', data.data.token], ['user_id', String(data.data.user_id)]], () => {
-        //   if (data.data.status === 0) {
-        //     // this.props.navigation.navigate("FirstLogin")
-        //   } else {
-        //     // this.props.navigation.navigate("Home")
-        //   }
-        // })
+        AsyncStorage.multiSet([['token', data.data.token], ['user_id', String(data.data.user_id)]], () => {
+          this.props.navigation.navigate("Dashboard")
+        })
 
       }
     } catch (err) {
@@ -90,6 +89,8 @@ class login extends Component {
   }
 
   render() {
+    const { isFocused } = this.props
+
     return (
       <ScrollView style={{ height: '100%' }} >
         <View style={styles.container}>
@@ -102,7 +103,7 @@ class login extends Component {
                 width: 300,
                 resizeMode: 'stretch'
               }} />
-              <Text style={{ marginTop: 30, fontSize: 20, color: '#F0F0F0' }}>Selamat Datang</Text>
+              <Text style={{ marginTop: 30, fontSize: 20, color: 'gray' }}>Selamat Datang</Text>
 
             </View>
 
@@ -138,14 +139,13 @@ class login extends Component {
                 </TouchableHighlight>
 
               </Item>
-              <TouchableHighlight onPress={this.login}
-                style={styles.button} underlayColor="transparent">
+              <Button style={styles.button} onPress={this.login} >
                 {
                   this.state.proses
                     ? <ActivityIndicator size="small" color="#fff" />
                     : <Text style={styles.textLogin}>Login</Text>
                 }
-              </TouchableHighlight>
+              </Button>
             </View>
 
           </View>
@@ -155,7 +155,7 @@ class login extends Component {
   }
 }
 
-login.navigationOptions = {
+LoginScreen.navigationOptions = {
   header: null
 };
 
@@ -175,8 +175,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   button: {
+    justifyContent: 'center',
     padding: 15,
-    borderWidth: 2,
     marginBottom: 30,
     width: '100%',
     borderRadius: 30,
@@ -213,5 +213,11 @@ const mapDispatchToProps = {
   setDataUser
 }
 
-export default connect(null, mapDispatchToProps)(login)
-// export default connect(null, mapDispatchToProps)(withNavigationFocus(login))
+function Login(props) {
+  const isFocused = useIsFocused();
+
+  return <LoginScreen {...props} isFocused={isFocused} />;
+}
+
+export default connect(null, mapDispatchToProps)(Login)
+// export default connect(null, mapDispatchToProps)(useIsFocused(login))

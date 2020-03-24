@@ -1,8 +1,9 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux';
 import AsyncStorage from '@react-native-community/async-storage';
+import { useIsFocused } from '@react-navigation/native';
 
-import { Text, View, StyleSheet, SafeAreaView, ScrollView, TouchableHighlight, Dimensions, Image, RefreshControl, BackHandler, Linking } from 'react-native';
+import { Text, View, StyleSheet, SafeAreaView, ScrollView, TouchableHighlight, Dimensions, Image, RefreshControl, ActivityIndicator, Linking, BackHandler } from 'react-native';
 import { Icon, Badge, Input, Item, Fab, List, ListItem, Left, Right } from 'native-base';
 import Popover from 'react-native-popover-view'
 
@@ -17,7 +18,7 @@ const isCloseToBottom = ({ layoutMeasurement, contentOffset, contentSize }) => {
   return layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
 };
 
-class dashboardScreen extends Component {
+class DashboardScreen extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -38,6 +39,8 @@ class dashboardScreen extends Component {
       loading: true
     })
 
+    this.backHandler = BackHandler.addEventListener('backPress', this.handleBackPress);
+
     await this.fetchNotif()
     await this.fetchData()
 
@@ -55,12 +58,39 @@ class dashboardScreen extends Component {
         this.setState({ dataForDisplay: hasilSearch })
       }
     }
+
+    if(this.props.isFocused !== prevProps.isFocused){
+      if(this.props.isFocused){
+        this.setState({
+          loading: true
+        })
+    
+        this.backHandler = BackHandler.addEventListener('backPress', this.handleBackPress);
+    
+        await this.fetchNotif()
+        await this.fetchData()
+    
+        this.setState({
+          loading: false
+        })
+      }
+    }
+  }
+
+  componentWillUnmount() {
+    BackHandler.removeEventListener('backPress', this.handleBackPress);
+  }
+
+  handleBackPress = () => {
+    if (this.props.isFocused === true) {
+      BackHandler.exitApp()
+    }
   }
 
   fetchNotif = async () => {
     // let token = await AsyncStorage.getItem('token')
     try {
-      let token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwibmFtZSI6IkJITjAwMSIsImVtYWlsIjoiQkhOMDAxQGdtYWlsLmNvbSIsImlhdCI6MTU4NDg2MTc5NH0.D85cWtQIDzZ2kXHvaIM4BnXCc9c2GVXFA2bqKl2sSIE'
+      let token = await AsyncStorage.getItem('token')
       let allNotif = await API.get('/notification', { headers: { token } })
 
       let newNotif = await allNotif.data.data.find(element => Number(element.read) === 0)
@@ -76,9 +106,8 @@ class dashboardScreen extends Component {
   }
 
   fetchData = async () => {
-    // let token = await AsyncStorage.getItem('token')
     try {
-      let token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwibmFtZSI6IkJITjAwMSIsImVtYWlsIjoiQkhOMDAxQGdtYWlsLmNvbSIsImlhdCI6MTU4NDg2MTc5NH0.D85cWtQIDzZ2kXHvaIM4BnXCc9c2GVXFA2bqKl2sSIE'
+      let token = await AsyncStorage.getItem('token')
       let allVisit = await API.get('/visit?page=1', { headers: { token } })
 
       this.setState({
@@ -94,16 +123,16 @@ class dashboardScreen extends Component {
 
     await AsyncStorage.clear()
 
-    alert("logout sukses")
     // const resetAction = StackActions.reset({
     //   index: 0,
     //   actions: [NavigationActions.navigate({ routeName: 'Login' })],
     // });
     // this.props.navigation.dispatch(resetAction);
+    this.props.navigation.navigate("Login")
 
-    // this.setState({
-    //   proses: false
-    // })
+    this.setState({
+      proses: false
+    })
   }
 
   showPopover() {
@@ -128,7 +157,7 @@ class dashboardScreen extends Component {
 
   handleOpenNotif = async (id, url) => {
     try {
-      // let token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwibmFtZSI6IkJITjAwMSIsImVtYWlsIjoiQkhOMDAxQGdtYWlsLmNvbSIsImlhdCI6MTU4NDg2MTc5NH0.D85cWtQIDzZ2kXHvaIM4BnXCc9c2GVXFA2bqKl2sSIE'
+      // let token = await AsyncStorage.getItem('token')
 
       // let updateNotif = await API.put(`/notification/${id}`, { headers: { token } })
 
@@ -144,7 +173,7 @@ class dashboardScreen extends Component {
 
   fetchDataLoadMore = async () => {
     try {
-      let token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwibmFtZSI6IkJITjAwMSIsImVtYWlsIjoiQkhOMDAxQGdtYWlsLmNvbSIsImlhdCI6MTU4NDg2MTc5NH0.D85cWtQIDzZ2kXHvaIM4BnXCc9c2GVXFA2bqKl2sSIE'
+      let token = await AsyncStorage.getItem('token')
       let getData = await API.get(`/visit?page=${this.state.page}`, { headers: { token } })
       let hasilSearch
 
@@ -176,6 +205,10 @@ class dashboardScreen extends Component {
     })
   }
 
+  navigateAddScreen = () => {
+    this.props.navigation.navigate("AddVisit")
+  }
+
   render() {
     function getFormatDate(args) {
       let months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
@@ -191,19 +224,19 @@ class dashboardScreen extends Component {
 
               {
                 this.state.newNotif
-                  ? <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} ref={ref => this.touchable = ref} onPress={() => this.showPopover()}>
+                  ? <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} ref={ref => this.touchable = ref} onPress={() => this.showPopover()} underlayColor="transparent">
                     <>
                       <Ionicons active name="ios-notifications" size={30} style={{ color: 'white' }} />
                       <Badge style={{ height: 10 }}></Badge>
                     </>
                   </TouchableHighlight>
-                  : <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} ref={ref => this.touchable = ref} onPress={() => this.showPopover()}>
+                  : <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} ref={ref => this.touchable = ref} onPress={() => this.showPopover()} underlayColor="transparent">
                     <Ionicons active name="ios-notifications-outline" size={30} style={{ color: 'white' }} />
                   </TouchableHighlight>
               }
 
             </View>
-            <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} onPress={() => this.logout()}>
+            <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} onPress={() => this.logout()} underlayColor="transparent">
               <>
                 <FontAwesome name='power-off' style={{ color: 'white', marginRight: 10 }} size={28} />
                 <Text style={{ fontSize: 18, color: 'white', fontWeight: 'bold' }}>Keluar</Text>
@@ -231,16 +264,16 @@ class dashboardScreen extends Component {
             scrollEventThrottle={400}>
             {
               this.state.loading
-                ? <Text>Loading</Text>
-                : this.state.dataForDisplay.map(element =>
-                  <View style={{ backgroundColor: 'white', minHeight: 470, height: 'auto', marginBottom: 20 }} key={element.visit_id}>
+                ? <ActivityIndicator size="large" color="#fff" />
+                : this.state.dataForDisplay.map((element, index) =>
+                  <View style={{ backgroundColor: 'white', minHeight: 470, height: 'auto', marginBottom: 20 }} key={index}>
                     <Image source={{ uri: `${BaseURL}/${element.img_store}` }} style={{ width: '100%', height: 400 }} />
 
                     <View style={{ paddingTop: 20, paddingBottom: 20, paddingLeft: 10, paddingRight: 10 }}>
                       <Text style={{
                         fontSize: 20
                       }}>{element.tbl_store.tbl_retailer.initial} - {element.tbl_store.store_name} ({element.tbl_store.store_code})</Text>
-                      <Text style={{ fontSize: 15, color: '#F0F0F0' }}>Dikunjungi tanggal {getFormatDate(element.visit_date)}</Text>
+                      <Text style={{ fontSize: 15, color: 'gray' }}>Dikunjungi tanggal {getFormatDate(element.visit_date)}</Text>
                     </View>
                   </View>
                 )
@@ -262,7 +295,7 @@ class dashboardScreen extends Component {
             containerStyle={{}}
             style={{ backgroundColor: 'green' }}
             position="bottomRight"
-          // onPress={() => this.setState({ active: !this.state.active })}>
+            onPress={this.navigateAddScreen}
           >
             <Feather name="plus" />
           </Fab>
@@ -275,15 +308,11 @@ class dashboardScreen extends Component {
           <List>
             {
               this.state.dataNotification.map(element =>
-                <ListItem selected key={element.id} onPress={() => this.handleOpenNotif(element.id, `${BaseURL}/${element.path_file}`)} style={{ dispaly: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
-                  {/* <Left> */}
+                <ListItem selected key={`${element.id}${element.path_file}`} onPress={() => this.handleOpenNotif(element.id, `${BaseURL}/${element.path_file}`)} style={{ dispaly: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text>{element.message}</Text>
-                  {/* </Left> */}
                   {
                     Number(element.read) === 0 && <Badge style={{ marginLeft: 10, height: 10 }} />
                   }
-                  {/* <Right>
-                  </Right> */}
                 </ListItem>
               )
             }
@@ -303,4 +332,10 @@ const styles = StyleSheet.create({
   },
 })
 
-export default connect()(dashboardScreen)
+function Dashboard(props) {
+  const isFocused = useIsFocused();
+
+  return <DashboardScreen {...props} isFocused={isFocused} />;
+}
+
+export default connect()(Dashboard)

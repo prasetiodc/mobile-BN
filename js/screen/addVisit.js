@@ -7,6 +7,7 @@ import { Icon, Badge, Input, Item, Form, List, ListItem, Picker, Label } from 'n
 import Popover from 'react-native-popover-view'
 import { ProgressSteps, ProgressStep } from 'react-native-progress-steps';
 // import ImagePicker from 'react-native-image-picker';
+// import Camera from 'react-native-camera'
 
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Feather from 'react-native-vector-icons/Feather';
@@ -45,35 +46,38 @@ class addVisit extends Component {
       city: '',
       address: '',
 
+      img_store: '',
+      img_fixture_in: null,
+      img_fixture_out: null,
       idStore: '',
-      entryFixComp: 'iya',
-      entryPegComp: 'iya',
-      entryPogComp: 'iya',
-      entryGoogle50k: 'iya',
-      entryGoogle100k: 'iya',
-      entryGoogle150k: 'iya',
-      entryGoogle300k: 'iya',
-      entryGoogle500k: 'iya',
-      entrySpotify1m: 'iya',
-      entrySpotify3m: 'iya',
-      entryPop1: 'iya',
-      entryPop2: 'iya',
+      entryFixComp: 'Iya',
+      entryPegComp: 'Iya',
+      entryPogComp: 'Iya',
+      entryGoogle50k: 'Iya',
+      entryGoogle100k: 'Iya',
+      entryGoogle150k: 'Iya',
+      entryGoogle300k: 'Iya',
+      entryGoogle500k: 'Iya',
+      entrySpotify1m: 'Iya',
+      entrySpotify3m: 'Iya',
+      entryPop1: 'Iya',
+      entryPop2: 'Iya',
       assistName: '',
-      giftCard: 'iya',
-      aktifPOR: 'iya',
-      changeCardGift: 'iya',
-      exitFixComp: 'iya',
-      exitPegComp: 'iya',
-      exitPogComp: 'iya',
-      exitGoogle50k: 'iya',
-      exitGoogle100k: 'iya',
-      exitGoogle150k: 'iya',
-      exitGoogle300k: 'iya',
-      exitGoogle500k: 'iya',
-      exitSpotify1m: 'iya',
-      exitSpotify3m: 'iya',
-      exitPop1: 'iya',
-      exitPop2: 'iya',
+      giftCard: 'Iya',
+      aktifPOR: 'Iya',
+      changeCardGift: 'Iya',
+      exitFixComp: 'Iya',
+      exitPegComp: 'Iya',
+      exitPogComp: 'Iya',
+      exitGoogle50k: 'Iya',
+      exitGoogle100k: 'Iya',
+      exitGoogle150k: 'Iya',
+      exitGoogle300k: 'Iya',
+      exitGoogle500k: 'Iya',
+      exitSpotify1m: 'Iya',
+      exitSpotify3m: 'Iya',
+      exitPop1: 'Iya',
+      exitPop2: 'Iya',
     };
   }
 
@@ -81,7 +85,7 @@ class addVisit extends Component {
     this.setState({
       loading: true
     })
-    console.log("MASUK")
+
     await this.fetchNotif()
     await this.fetchData()
 
@@ -93,7 +97,7 @@ class addVisit extends Component {
   async componentDidUpdate(prevProps, prevState) {
     if (this.state.idRetailer !== prevState.idRetailer) {
       let newListStore = await this.state.dataAllStore.filter(el => Number(el.retailer_id) === Number(this.state.idRetailer))
-      
+
       let initialRetailer = await this.state.dataAllRetailer.find(el => Number(el.id) === Number(this.state.idRetailer))
 
       this.setState({
@@ -124,9 +128,8 @@ class addVisit extends Component {
   }
 
   fetchData = async () => {
-    // let token = await AsyncStorage.getItem('token')
     try {
-      let token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwibmFtZSI6IkJITjAwMSIsImVtYWlsIjoiQkhOMDAxQGdtYWlsLmNvbSIsImlhdCI6MTU4NDg2MTc5NH0.D85cWtQIDzZ2kXHvaIM4BnXCc9c2GVXFA2bqKl2sSIE'
+      let token = await AsyncStorage.getItem('token')
       let allRetailer = await API.get('/retailer', { headers: { token } })
       let allStore = await API.get('/store', { headers: { token } })
 
@@ -142,11 +145,8 @@ class addVisit extends Component {
   }
 
   fetchNotif = async () => {
-    // let token = await AsyncStorage.getItem('token')
     try {
-      console.log("MASUK111")
-
-      let token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwibmFtZSI6IkJITjAwMSIsImVtYWlsIjoiQkhOMDAxQGdtYWlsLmNvbSIsImlhdCI6MTU4NDg2MTc5NH0.D85cWtQIDzZ2kXHvaIM4BnXCc9c2GVXFA2bqKl2sSIE'
+      let token = await AsyncStorage.getItem('token')
       let allNotif = await API.get('/notification', { headers: { token } })
 
       let newNotif = await allNotif.data.data.find(element => Number(element.read) === 0)
@@ -169,18 +169,15 @@ class addVisit extends Component {
   }
 
   logout = async () => {
+
     await AsyncStorage.clear()
 
-    alert("logout sukses")
     // const resetAction = StackActions.reset({
     //   index: 0,
     //   actions: [NavigationActions.navigate({ routeName: 'Login' })],
     // });
     // this.props.navigation.dispatch(resetAction);
-
-    // this.setState({
-    //   proses: false
-    // })
+    this.props.navigation.navigate("Login")
   }
 
   onValueChangeRetailer = value => {
@@ -195,46 +192,69 @@ class addVisit extends Component {
     });
   }
 
-  submit = () => {
-    let newData = {
-      img_store: img_store ? img_store : (req.files[0] ? req.files[0].path : ""),
-      img_fixture_in: img_fixture_in ? img_fixture_in : (req.files[1] ? req.files[1].path : ""),
-      img_fixture_out: img_fixture_out ? img_fixture_out : (req.files[2] ? req.files[2].path : ""),
+  submit = async () => {
 
-      visit_date: new Date(req.body.visit_date),
-      user_id: req.user_id,
-      store_code: req.body.store_code,
+    try {
+      let token = await AsyncStorage.getItem('token')
+      var formData = new FormData();
 
-      visit_fixture_id: visitFixture.id,
-      entry_fixture_comp: req.body.entry_fixture_comp,
-      entry_peg_comp: req.body.entry_peg_comp,
-      entry_pog_comp: req.body.entry_pog_comp,
-      entry_pop_pic_1: req.body.entry_pop_pic_1,
-      entry_pop_pic_2: req.body.entry_pop_pic_2,
-      entry_google50k: req.body.entry_google50k,
-      entry_google100k: req.body.entry_google100k,
-      entry_google150k: req.body.entry_google150k,
-      entry_google300k: req.body.entry_google300k,
-      entry_google500k: req.body.entry_google500k,
-      entry_spotify1M: req.body.entry_spotify1M,
-      entry_spotify3M: req.body.entry_spotify3M,
-      exit_fixture_comp: req.body.exit_fixture_comp,
-      exit_peg_comp: req.body.exit_peg_comp,
-      exit_pog_comp: req.body.exit_pog_comp,
-      exit_pop_pic_1: req.body.exit_pop_pic_1,
-      exit_pop_pic_2: req.body.exit_pop_pic_2,
-      exit_google50k: req.body.exit_google50k,
-      exit_google100k: req.body.exit_google100k,
-      exit_google150k: req.body.exit_google150k,
-      exit_google300k: req.body.exit_google300k,
-      exit_google500k: req.body.exit_google500k,
-      exit_spotify1M: req.body.exit_spotify1M,
-      exit_spotify3M: req.body.exit_spotify3M,
-      assistants_name: req.body.assistants_name,
-      q1: req.body.q1,
-      q2: req.body.q2,
-      q3: req.body.q3,
-      q4: req.body.q4
+      formData.append("files", this.state.img_store, 'img_store')
+      formData.append("files", this.state.img_fixture_in, 'img_fixture_in')
+      formData.append("files", this.state.img_fixture_out, 'img_fixture_out')
+
+      formData.append("visit_date", `${new Date()}`)
+      formData.append("user_id", this.props.user_id)
+      formData.append("store_code", this.state.idStore)
+      formData.append("entry_fixture_comp", this.state.entryFixComp.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("entry_peg_comp", this.state.entryPegComp.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("entry_pog_comp", this.state.entryPogComp.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("entry_pop_pic_1", this.state.entryPop1.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("entry_pop_pic_2", this.state.entryPop2.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("entry_google50k", this.state.entryGoogle50k.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("entry_google100k", this.state.entryGoogle100k.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("entry_google150k", this.state.entryGoogle150k.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("entry_google300k", this.state.entryGoogle300k.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("entry_google500k", this.state.entryGoogle500k.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("entry_spotify1M", this.state.entrySpotify1m.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("entry_spotify3M", this.state.entrySpotify3m.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("exit_fixture_comp", this.state.exitFixComp.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("exit_peg_comp", this.state.exitPegComp.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("exit_pog_comp", this.state.exitPogComp.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("exit_pop_pic_1", this.state.exitPop1.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("exit_pop_pic_2", this.state.exitPop2.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("exit_google50k", this.state.exitGoogle50k.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("exit_google100k", this.state.exitGoogle100k.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("exit_google150k", this.state.exitGoogle150k.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("exit_google300k", this.state.exitGoogle300k.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("exit_google500k", this.state.exitGoogle500k.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("exit_spotify1M", this.state.exitSpotify1m.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("exit_spotify3M", this.state.exitSpotify3m.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("assistants_name", this.state.assistName)
+
+      formData.append("q1", this.state.giftCard.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("q2", this.state.aktifPOR.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("q3", this.state.changeCardGift.toLowerCase() === "iya" ? 1 : 0)
+
+      // formData.append("q4", req.body.q4)
+      API.post('/visit', formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            token
+          }
+        }
+      )
+        .then(data => {
+          this.resetForm()
+          this.props.navigation.goBack()
+        })
+        .catch(err => {
+          console.log(err)
+        })
+    } catch (err) {
+      console.log(err)
+      alert(err)
+
     }
   }
 
@@ -258,9 +278,56 @@ class addVisit extends Component {
     })
   }
 
-  onSubmitSteps = () => {
-    alert("SAVE")
-  };
+  takePicture = () => {
+    const options = {}
+
+    this.camera.capture({ metadata: options }).then((data) => {
+      console.log(data)
+    }).catch((error) => {
+      console.log(error)
+    })
+  }
+
+  resetForm = () => {
+    this.setState({
+      idRetailer: '',
+      initialRetailer: '',
+      nameStore: '',
+      dc: '',
+      city: '',
+      address: '',
+
+      idStore: '',
+      entryFixComp: 'Iya',
+      entryPegComp: 'Iya',
+      entryPogComp: 'Iya',
+      entryGoogle50k: 'Iya',
+      entryGoogle100k: 'Iya',
+      entryGoogle150k: 'Iya',
+      entryGoogle300k: 'Iya',
+      entryGoogle500k: 'Iya',
+      entrySpotify1m: 'Iya',
+      entrySpotify3m: 'Iya',
+      entryPop1: 'Iya',
+      entryPop2: 'Iya',
+      assistName: '',
+      giftCard: 'Iya',
+      aktifPOR: 'Iya',
+      changeCardGift: 'Iya',
+      exitFixComp: 'Iya',
+      exitPegComp: 'Iya',
+      exitPogComp: 'Iya',
+      exitGoogle50k: 'Iya',
+      exitGoogle100k: 'Iya',
+      exitGoogle150k: 'Iya',
+      exitGoogle300k: 'Iya',
+      exitGoogle500k: 'Iya',
+      exitSpotify1m: 'Iya',
+      exitSpotify3m: 'Iya',
+      exitPop1: 'Iya',
+      exitPop2: 'Iya',
+    })
+  }
 
   render() {
     return (
@@ -284,7 +351,7 @@ class addVisit extends Component {
               }
 
             </View>
-            <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} onPress={() => this.logout()}>
+            <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} onPress={() => this.logout()} underlayColor="transparent">
               <>
                 <FontAwesome name='power-off' style={{ color: 'white', marginRight: 10 }} size={28} />
                 <Text style={{ fontSize: 18, color: 'white', fontWeight: 'bold' }}>Keluar</Text>
@@ -369,10 +436,22 @@ class addVisit extends Component {
                     </View>
                     <View id="foto" style={{ marginBottom: 15 }}>
                       <Label>Image Store</Label>
-                      <Input
+                      {/* <Input
                         value="BELUM"
                         style={{ backgroundColor: '#F0F0F0' }}
-                        disabled />
+                        disabled /> */}
+                      {/* <Camera
+                        ref={(cam) => {
+                          this.camera = cam
+                        }}
+                        style={styles.view}
+                        >
+                        <Text
+                          style={styles.capture}
+                          onPress={this.takePicture.bind(this)}>
+                          [CAPTURE_IMAGE]
+                        </Text>
+                      </Camera> */}
                     </View>
                     {/* <Item>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -961,7 +1040,7 @@ class addVisit extends Component {
               </ProgressStep>
 
 
-              <ProgressStep label="" onSubmit={this.onSubmitSteps} nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle}>
+              <ProgressStep label="" onSubmit={this.submit} nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle}>
                 <ScrollView>
                   <Form style={{ padding: 20, paddingTop: 0 }}>
                     <>
@@ -1343,4 +1422,9 @@ const styles = StyleSheet.create({
   },
 })
 
-export default connect()(addVisit)
+const mapStateToProps = ({ user_id }) => {
+  return {
+    user_id
+  }
+}
+export default connect(mapStateToProps)(addVisit)

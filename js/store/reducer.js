@@ -1,5 +1,7 @@
 const defaultState = {
-  user_id: null
+  user_id: null,
+  name: '',
+  role_id: null
 }
 
 function reducer(state = defaultState, action) {
@@ -9,11 +11,13 @@ function reducer(state = defaultState, action) {
         ...state,
         loading: true
       }
-    }    
+    }
     case 'SET_DATA_USER': {
       return {
         ...state,
         user_id: action.payload.user_id,
+        name: action.payload.name,
+        role_id: action.payload.role_id,
       }
     }
     case 'FETCH_DATA_ERROR': {
