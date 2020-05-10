@@ -2,14 +2,13 @@ import React, { Component } from 'react'
 import { connect } from 'react-redux';
 import AsyncStorage from '@react-native-community/async-storage';
 import { useIsFocused } from '@react-navigation/native';
+import NetInfo from "@react-native-community/netinfo";
 
-import { Text, View, StyleSheet, SafeAreaView, ScrollView, TouchableHighlight, Dimensions, Image, RefreshControl, ActivityIndicator, Linking, BackHandler } from 'react-native';
-import { Icon, Badge, Input, Item, Fab, List, ListItem, Left, Right } from 'native-base';
+import { Text, View, StyleSheet, SafeAreaView, ScrollView, TouchableHighlight, Image, ActivityIndicator, Linking, BackHandler } from 'react-native';
+import { Badge, Input, Item, Fab, List, ListItem, Toast } from 'native-base';
 import Popover from 'react-native-popover-view'
 
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import Feather from 'react-native-vector-icons/Feather';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import CardVisit from '../component/cardVisit';
 
 import { API, BaseURL } from '../../config/API';
 
@@ -30,23 +29,14 @@ class DashboardScreen extends Component {
       isVisible: false,
       newNotif: false,
       page: 1,
-      loadingText: false
+      loadingText: false,
+      sendPendingVisit: false
     };
   }
 
   async componentDidMount() {
-    this.setState({
-      loading: true
-    })
-
     this.backHandler = BackHandler.addEventListener('backPress', this.handleBackPress);
-
-    await this.fetchNotif()
-    await this.fetchData()
-
-    this.setState({
-      loading: false
-    })
+    await this.refresh()
   }
 
   async componentDidUpdate(prevProps, prevState) {
@@ -59,20 +49,9 @@ class DashboardScreen extends Component {
       }
     }
 
-    if(this.props.isFocused !== prevProps.isFocused){
-      if(this.props.isFocused){
-        this.setState({
-          loading: true
-        })
-    
-        this.backHandler = BackHandler.addEventListener('backPress', this.handleBackPress);
-    
-        await this.fetchNotif()
-        await this.fetchData()
-    
-        this.setState({
-          loading: false
-        })
+    if (this.props.isFocused !== prevProps.isFocused) {
+      if (this.props.isFocused === true) {
+        await this.sendPendingVisit()
       }
     }
   }
@@ -99,8 +78,12 @@ class DashboardScreen extends Component {
         newNotif: newNotif ? true : false,
       })
     } catch (err) {
-      console.log(err)
-      alert(err)
+      Toast.show({
+        text: "Fetch notification failed",
+        buttonText: "Okay",
+        duration: 3000,
+        type: "danger"
+      })
     }
   }
 
@@ -114,19 +97,19 @@ class DashboardScreen extends Component {
         dataForDisplay: allVisit.data.data,
       })
     } catch (err) {
-      alert(err)
+      console.log(err)
+      Toast.show({
+        text: "Fetch data visit failed",
+        buttonText: "Okay",
+        duration: 3000,
+        type: "danger"
+      })
     }
   }
 
   logout = async () => {
 
     await AsyncStorage.clear()
-
-    // const resetAction = StackActions.reset({
-    //   index: 0,
-    //   actions: [NavigationActions.navigate({ routeName: 'Login' })],
-    // });
-    // this.props.navigation.dispatch(resetAction);
     this.props.navigation.navigate("Login")
 
     this.setState({
@@ -147,7 +130,21 @@ class DashboardScreen extends Component {
       loading: true
     })
 
-    await this.fetchData()
+    await this.sendPendingVisit()
+
+    NetInfo.fetch().then(async state => {
+      if (state.isConnected) {
+        await this.fetchNotif()
+        await this.fetchData()
+      } else {
+        Toast.show({
+          text: "No connection",
+          buttonText: "Okay",
+          duration: 3000,
+          type: "danger"
+        })
+      }
+    })
 
     this.setState({
       loading: false
@@ -156,17 +153,16 @@ class DashboardScreen extends Component {
 
   handleOpenNotif = async (id, url) => {
     try {
-      // let token = await AsyncStorage.getItem('token_bhn_md')
+      let token = await AsyncStorage.getItem('token_bhn_md')
 
-      // let updateNotif = await API.put(`/notification/${id}`, { headers: { token } })
+      let updateNotif = await API.put(`/notification/${id}`, {}, { headers: { token } })
 
-      // if (updateNotif) {
-      this.closePopover()
-      // this.fetchNotif()
-      Linking.openURL(url);
-      // }
+      if (updateNotif) {
+        this.closePopover()
+        await this.fetchNotif()
+        Linking.openURL(url);
+      }
     } catch (err) {
-      alert(err)
     }
   }
 
@@ -187,7 +183,12 @@ class DashboardScreen extends Component {
         dataForDisplay: [...this.state.dataForDisplay, ...hasilSearch],
       })
     } catch (err) {
-      alert(err)
+      Toast.show({
+        text: "Fetch more data visit failed",
+        buttonText: "Okay",
+        duration: 3000,
+        type: "danger"
+      })
     }
   }
 
@@ -205,15 +206,24 @@ class DashboardScreen extends Component {
   }
 
   navigateAddScreen = () => {
-    this.props.navigation.navigate("AddVisit")
+    this.props.navigation.navigate("AddVisit", { refresh: () => this.refresh() })
+  }
+
+  navigateListPendingVisit = () => {
+    this.props.navigation.navigate("ListPendingVisit", { sendPendingVisit: () => this.sendPendingVisit() })
+  }
+
+  sendPendingVisit = async () => {
+    let listPendingVisit = await AsyncStorage.getItem('visit_pending')
+
+    if (listPendingVisit && listPendingVisit !== "[]") {
+      this.setState({ sendPendingVisit: true })
+    } else {
+      this.setState({ sendPendingVisit: false })
+    }
   }
 
   render() {
-    function getFormatDate(args) {
-      let months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
-
-      return `${new Date(args).getDate()} ${months[new Date(args).getMonth()]} ${new Date(args).getFullYear()}`
-    }
     return (
       <>
         <SafeAreaView style={{ height: '100%', backgroundColor: '#0079C2', padding: 15 }}>
@@ -224,20 +234,30 @@ class DashboardScreen extends Component {
               {
                 this.state.newNotif
                   ? <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} ref={ref => this.touchable = ref} onPress={() => this.showPopover()} underlayColor="transparent">
-                    <>
-                      <Ionicons active name="ios-notifications" size={30} style={{ color: 'white' }} />
-                      <Badge style={{ height: 10 }}></Badge>
-                    </>
+                    <Image source={require('../asset/notif-new.png')} style={{
+                      height: 30,
+                      width: 33,
+                      resizeMode: 'stretch'
+                    }} />
                   </TouchableHighlight>
                   : <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} ref={ref => this.touchable = ref} onPress={() => this.showPopover()} underlayColor="transparent">
-                    <Ionicons active name="ios-notifications-outline" size={30} style={{ color: 'white' }} />
+                    <Image source={require('../asset/notif.png')} style={{
+                      height: 27,
+                      width: 27,
+                      resizeMode: 'stretch'
+                    }} />
                   </TouchableHighlight>
               }
 
             </View>
             <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} onPress={() => this.logout()} underlayColor="transparent">
               <>
-                <FontAwesome name='power-off' style={{ color: 'white', marginRight: 10 }} size={28} />
+                <Image source={require('../asset/logout.png')} style={{
+                  height: 27,
+                  width: 27,
+                  resizeMode: 'stretch',
+                  marginRight: 5
+                }} />
                 <Text style={{ fontSize: 18, color: 'white', fontWeight: 'bold' }}>Keluar</Text>
               </>
             </TouchableHighlight>
@@ -264,39 +284,61 @@ class DashboardScreen extends Component {
             {
               this.state.loading
                 ? <ActivityIndicator size="large" color="#fff" />
-                : this.state.dataForDisplay.map((element, index) =>
-                  <View style={{ backgroundColor: 'white', minHeight: 470, height: 'auto', marginBottom: 20 }} key={index}>
-                    <Image source={{ uri: `${BaseURL}/${element.img_store}` }} style={{ width: '100%', height: 400 }} />
-
-                    <View style={{ paddingTop: 20, paddingBottom: 20, paddingLeft: 10, paddingRight: 10 }}>
-                      <Text style={{
-                        fontSize: 20
-                      }}>{element.tbl_store.tbl_retailer.initial} - {element.tbl_store.store_name} ({element.tbl_store.store_code})</Text>
-                      <Text style={{ fontSize: 15, color: 'gray' }}>Dikunjungi tanggal {getFormatDate(element.visit_date)}</Text>
-                    </View>
+                : this.state.dataForDisplay.length > 0
+                  ? this.state.dataForDisplay.map((element, index) =>
+                    <TouchableHighlight style={{ backgroundColor: 'white', minHeight: 470, height: 'auto', marginBottom: 20 }} key={index} underlayColor="white" onPress={() => this.props.navigation.navigate('DetailVisit', { data: element })}>
+                      <CardVisit data={element} />
+                    </TouchableHighlight>
+                  )
+                  : <View style={{ width: '100%', alignItems: 'center' }}>
+                    <Image source={require('../asset/search.png')} style={{
+                      height: 250,
+                      width: 250,
+                      resizeMode: 'stretch',
+                      marginTop: 50
+                    }} />
                   </View>
-                )
             }
             {
               this.state.loadingText && this.state.data.length > 0 && <Text style={{ alignSelf: 'center', margin: 5, color: 'white' }}>Loading more...</Text>
             }
           </ScrollView>
+          {
+            this.state.sendPendingVisit && <Fab
+              active={this.state.active}
+              style={{ backgroundColor: 'red', marginBottom: 145 }}
+              position="bottomRight"
+              onPress={() => this.navigateListPendingVisit()}>
+              <Image source={require('../asset/pending.png')} style={{
+                height: 35,
+                width: 35,
+                resizeMode: 'stretch'
+              }} />
+            </Fab>
+          }
+
           <Fab
             active={this.state.active}
-            containerStyle={{}}
             style={{ backgroundColor: 'white', marginBottom: 70 }}
             position="bottomRight"
             onPress={() => this.refresh()}>
-            <Ionicons name="md-refresh" style={{ color: "black" }} />
+            <Image source={require('../asset/refresh.png')} style={{
+              height: 20,
+              width: 20,
+              resizeMode: 'stretch'
+            }} />
           </Fab>
           <Fab
             active={this.state.active}
-            containerStyle={{}}
             style={{ backgroundColor: 'green' }}
             position="bottomRight"
             onPress={this.navigateAddScreen}
           >
-            <Feather name="plus" />
+            <Image source={require('../asset/plus.png')} style={{
+              height: 20,
+              width: 20,
+              resizeMode: 'stretch'
+            }} />
           </Fab>
         </SafeAreaView >
 

@@ -1,17 +1,11 @@
 import React, { Component } from 'react';
-import { StyleSheet, TouchableHighlight, Image, View, Dimensions, ScrollView, ActivityIndicator, Linking, BackHandler } from 'react-native';
-import { Item, Input, Text, Label, Button } from 'native-base';
+import { StyleSheet, TouchableHighlight, Image, View, Dimensions, ScrollView, ActivityIndicator, BackHandler } from 'react-native';
+import { Item, Input, Text, Button, Toast } from 'native-base';
 import { API } from '../../config/API';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import SimpleLineIcons from 'react-native-vector-icons/SimpleLineIcons';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-community/async-storage';
 import { connect } from 'react-redux';
 import { setDataUser } from '../store/action';
 import { useIsFocused } from '@react-navigation/native';
-import { set } from 'react-native-reanimated';
-
-// import { withNavigationFocus } from 'react-navigation';
 
 class LoginScreen extends Component {
 
@@ -22,7 +16,8 @@ class LoginScreen extends Component {
       password: '',
       proses: false,
       editableInput: true,
-      seePassword: false
+      seePassword: false,
+      showToast: false
     };
   }
 
@@ -41,48 +36,70 @@ class LoginScreen extends Component {
   }
 
   login = async () => {
-    this.setState({
-      proses: true,
-      editableInput: false
-    })
-    let user, data
-
-    user = {
-      email: this.state.email,
-      password: this.state.password
-    }
-
-    try {
-      data = await API.post('/user/signin', user)
-      if (data) {
+    NetInfo.fetch().then(async state => {
+      if (state.isConnected) {
         this.setState({
-          proses: false,
-          editableInput: true,
-          email: '',
-          password: ''
+          proses: true,
+          editableInput: false
         })
+        let user, data
 
-        let dataUser = {
-          user_id: data.data.user_id,
-          name: data.data.name,
-          role_id: data.data.role_id
+        user = {
+          email: this.state.email,
+          password: this.state.password
         }
-        await this.props.setDataUser(dataUser)
 
-        await AsyncStorage.set('token_bhn_md', data.data.token)
-        this.props.navigation.navigate("Dashboard")
-        // await AsyncStorage.multiSet([['token_bhn_md', data.data.token], ['user_id', String(data.data.user_id)]], () => {
-        //   this.props.navigation.navigate("Dashboard")
-        // })
+        try {
+          data = await API.post('/user/signin', user)
+          if (data) {
+            this.setState({
+              proses: false,
+              editableInput: true,
+              email: '',
+              password: ''
+            })
 
+            let dataUser = {
+              user_id: data.data.user_id,
+              name: data.data.name,
+              role_id: data.data.role_id
+            }
+            await this.props.setDataUser(dataUser)
+
+            await AsyncStorage.setItem('token_bhn_md', data.data.token)
+            this.props.navigation.navigate("Dashboard")
+          }
+        } catch (err) {
+          if (err.message === 'Network Error') {
+            Toast.show({
+              text: "Unknown error",
+              buttonText: "Okay",
+              duration: 3000,
+              type: "danger"
+            })
+          } else {
+            Toast.show({
+              text: "Email/password salah. Silahkan coba lagi.",
+              buttonText: "Okay",
+              duration: 3000,
+              type: "danger"
+            })
+          }
+          this.setState({
+            proses: false,
+            editableInput: true
+          })
+        }
+      } else {
+        Toast.show({
+          text: "No connection",
+          buttonText: "Okay",
+          duration: 3000,
+          type: "danger"
+        })
       }
-    } catch (err) {
-      alert("email/password salah. Silahkan coba lagi.")
-      this.setState({
-        proses: false,
-        editableInput: true
-      })
-    }
+    })
+
   }
 
   seePassword = () => {
@@ -99,7 +116,7 @@ class LoginScreen extends Component {
         <View style={styles.container}>
           <View style={styles.content}>
 
-            {/* LOGO POLAGROUP */}
+            {/* LOGO */}
             <View style={styles.logo}>
               <Image source={require('../asset/logo.png')} style={{
                 height: 70,
@@ -136,8 +153,16 @@ class LoginScreen extends Component {
                   underlayColor="transparent">
                   {
                     this.state.seePassword
-                      ? <MaterialCommunityIcons name='eye-off-outline' style={styles.icon} size={30} />
-                      : <MaterialCommunityIcons name='eye-outline' style={styles.icon} size={30} />
+                      ? <Image source={require('../asset/see-pass.png')} style={{
+                        height: 20,
+                        width: 35,
+                        resizeMode: 'stretch'
+                      }} />
+                      : <Image source={require('../asset/hide-pass.png')} style={{
+                        height: 20,
+                        width: 35,
+                        resizeMode: 'stretch'
+                      }} />
                   }
                 </TouchableHighlight>
 
@@ -151,6 +176,10 @@ class LoginScreen extends Component {
               </Button>
             </View>
 
+            {/* Version Code */}
+            <View style={styles.center}>
+              <Text style={{ fontSize: 12, marginTop: 5 }} >Version 1.0</Text>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -166,14 +195,14 @@ const { height } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
-    height: '100%',
+    height: height - 25,
     flex: 1,
     alignItems: 'center',
   },
   content: {
     flex: 1,
     width: '80%',
-    marginTop: 50,
+    height: '100%',
     flexDirection: 'column',
     justifyContent: 'center'
   },

@@ -1,17 +1,14 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux';
 import AsyncStorage from '@react-native-community/async-storage';
+import NetInfo from "@react-native-community/netinfo";
 
-import { Text, View, StyleSheet, SafeAreaView, ScrollView, TouchableHighlight, Dimensions, Image, RefreshControl, BackHandler, Linking } from 'react-native';
-import { Icon, Badge, Input, Item, Form, List, ListItem, Picker, Label, Button } from 'native-base';
+import { Text, View, StyleSheet, ScrollView, TouchableHighlight, Dimensions, Image, ActivityIndicator } from 'react-native';
+import { Icon, Badge, Input, Item, Form, List, ListItem, Picker, Label, Button, Toast } from 'native-base';
 import Popover from 'react-native-popover-view'
 import { ProgressSteps, ProgressStep } from 'react-native-progress-steps';
 import ImagePicker from 'react-native-image-picker';
-// import Camera from 'react-native-camera'
 
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import Feather from 'react-native-vector-icons/Feather';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { API, BaseURL } from '../../config/API';
 
@@ -30,36 +27,54 @@ const buttonTextStyle = {
   fontWeight: 'bold'
 };
 
-class addVisit extends Component {
+class AddVisit extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      loading: false,
       dataNotification: [],
       isVisible: false,
       dataAllRetailer: [],
       dataAllStore: [],
+      dataAllDC: [],
       dataAllStoreForDisplay: [],
+      dataFixtureType: [],
       idRetailer: '',
+      idDC: '',
       initialRetailer: '',
       nameStore: '',
-      dc: '',
       city: '',
       address: '',
 
-      img_store: '',
+      hasChangeNameStore: '',
+      hasChangeDc: '',
+      hasChangeCity: '',
+      hasChangeAddress: '',
+
+      img_store: null,
       img_fixture_in: null,
       img_fixture_out: null,
       idStore: '',
       entryFixComp: 'Iya',
-      entryPegComp: 'Iya',
+      entryCorrectFix: '1',
+      entryPegComp: 'Tidak',
+      entryBrokenHanger: '0',
       entryPogComp: 'Iya',
+      entryCorrectPog: 'Messy',
       entryGoogle50k: 'Iya',
+      entryLotGoogle50k: '',
       entryGoogle100k: 'Iya',
+      entryLotGoogle100k: '',
       entryGoogle150k: 'Iya',
+      entryLotGoogle150k: '',
       entryGoogle300k: 'Iya',
+      entryLotGoogle300k: '',
       entryGoogle500k: 'Iya',
+      entryLotGoogle500k: '',
       entrySpotify1m: 'Iya',
+      entryLotSpotify1m: '',
       entrySpotify3m: 'Iya',
+      entryLotSpotify3m: '',
       entryPop1: 'Iya',
       entryPop2: 'Iya',
       assistName: '',
@@ -67,17 +82,37 @@ class addVisit extends Component {
       aktifPOR: 'Iya',
       changeCardGift: 'Iya',
       exitFixComp: 'Iya',
-      exitPegComp: 'Iya',
+      exitCorrectFix: '1',
+      exitPegComp: 'Tidak',
+      exitBrokenHanger: '0',
       exitPogComp: 'Iya',
+      exitCorrectPog: 'Messy',
       exitGoogle50k: 'Iya',
+      exitLotGoogle50k: '',
       exitGoogle100k: 'Iya',
+      exitLotGoogle100k: '',
       exitGoogle150k: 'Iya',
+      exitLotGoogle150k: '',
       exitGoogle300k: 'Iya',
+      exitLotGoogle300k: '',
       exitGoogle500k: 'Iya',
+      exitLotGoogle500k: '',
       exitSpotify1m: 'Iya',
+      exitLotSpotify1m: '',
       exitSpotify3m: 'Iya',
+      exitLotSpotify3m: '',
       exitPop1: 'Iya',
       exitPop2: 'Iya',
+
+      imgPOG1: '',
+      imgPOG2: '',
+      imgFixture1: '',
+      imgFixture2: '',
+      imgPOP1: '',
+      imgPOP2: '',
+
+      showSuggestion: false,
+      hasSelectedStore: false
     };
   }
 
@@ -100,47 +135,155 @@ class addVisit extends Component {
 
       let initialRetailer = await this.state.dataAllRetailer.find(el => Number(el.id) === Number(this.state.idRetailer))
 
-      this.setState({
+      initialRetailer && this.setState({
         initialRetailer: initialRetailer.initial,
-        dataAllStoreForDisplay: newListStore
+        dataAllStoreForDisplay: newListStore.slice(0, 4),
+        imgPOP1: initialRetailer.promotion_1,
+        imgPOP2: initialRetailer.promotion_2,
+        // idStore: newListStore[0].store_code
       })
+
     }
 
     if (this.state.idStore !== prevState.idStore) {
-      let storeSelected = await this.state.dataAllStoreForDisplay.find(el => el.store_code === this.state.idStore)
 
-      if (storeSelected) {
-        this.setState({
-          nameStore: storeSelected.store_name,
-          dc: storeSelected.tbl_dc.DC_name,
-          city: storeSelected.city,
-          address: storeSelected.address
-        })
-      } else {
+      let hasilSearch = await this.state.dataAllStoreForDisplay.filter(el => el.store_code.toLowerCase().match(new RegExp(this.state.idStore.toLowerCase())))
+      this.setState({ dataAllStoreForDisplay: hasilSearch, showSuggestion: true })
+
+      if (this.state.nameStore) {
         this.setState({
           nameStore: "",
           dc: "",
           city: "",
-          address: ""
+          address: "",
+          imgPOG1: "",
+          imgPOG2: "",
+          imgFixture1: "",
+          imgFixture2: "",
+          hasSelectedStore: false
         })
       }
     }
+
+    if (this.state.hasSelectedStore !== prevState.hasSelectedStore) {
+      if (this.state.hasSelectedStore) {
+        let storeSelected = await this.state.dataAllStoreForDisplay.find(el => el.store_code === this.state.idStore)
+
+        if (storeSelected) {
+          let POG1, POG2, Fix1, Fix2
+
+          if (storeSelected.fixture_type_id_1) {
+            POG1 = storeSelected.fixtureType1.POG
+            Fix1 = storeSelected.fixtureType1.fixture_traits
+          }
+          if (storeSelected.fixture_type_id_2) {
+            POG2 = storeSelected.fixtureType2.POG
+            Fix2 = storeSelected.fixtureType2.fixture_traits
+          }
+
+          this.setState({
+            nameStore: storeSelected.store_name,
+            idDC: storeSelected.tbl_dc.id,
+            city: storeSelected.city,
+            address: storeSelected.address,
+            imgPOG1: POG1 ? POG1 : "",
+            imgPOG2: POG2 ? POG2 : "",
+            imgFixture1: Fix1 ? Fix1 : "",
+            imgFixture2: Fix2 ? Fix2 : "",
+            showSuggestion: false
+
+          })
+        } else {
+          this.setState({
+            nameStore: "",
+            dc: "",
+            city: "",
+            address: "",
+            imgPOG1: "",
+            imgPOG2: "",
+            imgFixture1: "",
+            imgFixture2: "",
+            showSuggestion: false
+          })
+        }
+      }
+    }
+
+    if (this.state.nameStore !== prevState.nameStore && prevState.nameStore !== '') {
+      this.setState({
+        hasChangeNameStore: true
+      })
+    }
+
+    if (this.state.idDC !== prevState.idDC && prevState.idDC !== '') {
+      this.setState({
+        hasChangeDc: true
+      })
+    }
+
+    if (this.state.city !== prevState.city && prevState.city !== '') {
+      this.setState({
+        hasChangeCity: true
+      })
+    }
+
+    if (this.state.address !== prevState.address && prevState.address !== '') {
+      this.setState({
+        hasChangeAddress: true
+      })
+    }
+
   }
 
   fetchData = async () => {
     try {
+      this.setState({
+        loading: true
+      })
       let token = await AsyncStorage.getItem('token_bhn_md')
       let allRetailer = await API.get('/retailer', { headers: { token } })
-      let allStore = await API.get('/store', { headers: { token } })
+      let allStore = await API.get('/store?forVisit=true', { headers: { token } })
+      let allDc = await API.get('/dc', { headers: { token } })
+      let allFixtureType = await API.get('/fixture-type', { headers: { token } })
 
-      allStore = await allStore.data.data.filter(el => Number(el.md_id) === 2)
+      // allStore = await allStore.data.data.filter(el => Number(el.md_id) === this.props.user_id)
+
+      let newListRetailer = []
+      // if (allStore.data.data.length > 0) {
+      await allRetailer.data.data.forEach(async element => {
+        let isAvailable = await allStore.data.data.find(el => el.retailer_id === element.id)
+        if (isAvailable) newListRetailer.push(element)
+      });
+      // }
+
+
       this.setState({
-        dataAllRetailer: allRetailer.data.data,
-        dataAllStore: allStore,
-        dataAllStoreForDisplay: allStore
+        loading: false,
+        dataAllRetailer: newListRetailer,
+        dataAllStore: allStore.data.data,
+        dataAllStoreForDisplay: allStore.data.data,
+        dataAllDC: allDc.data.data,
+        dataFixtureType: allFixtureType.data.data
       })
+
+      if (allStore.length === 0) {
+        Toast.show({
+          text: "Anda belum ditugaskan di Toko manapun",
+          buttonText: "Okay",
+          duration: 5000,
+          type: "danger"
+        })
+      }
     } catch (err) {
-      alert(err)
+      this.setState({
+        loading: false
+      })
+      Toast.show({
+        text: "Fetch data retailer and store failed. Please try again",
+        buttonText: "Okay",
+        duration: 3000,
+        type: "danger"
+      })
     }
   }
 
@@ -156,7 +299,12 @@ class addVisit extends Component {
         newNotif: newNotif ? true : false,
       })
     } catch (err) {
-      alert(err)
+      Toast.show({
+        text: "Fetch notification failed",
+        buttonText: "Okay",
+        duration: 3000,
+        type: "danger"
+      })
     }
   }
 
@@ -192,46 +340,72 @@ class addVisit extends Component {
     });
   }
 
-  submit = async () => {
+  submit = () => {
+    NetInfo.fetch().then(state => {
+      // console.log("Connection type", state.type);
+      // console.log("Is connected?", state.isConnected);
 
+      if (state.isConnected) {
+        this.sendVisit()
+      } else {
+        this.pendingVisit()
+      }
+    })
+  }
+
+  sendVisit = async () => {
     try {
+      this.setState({
+        loading: true
+      })
+
       let token = await AsyncStorage.getItem('token_bhn_md')
+
       var formData = new FormData();
 
       formData.append("visit_date", `${new Date()}`)
       formData.append("user_id", this.props.user_id)
       formData.append("store_code", this.state.idStore)
       formData.append("entry_fixture_comp", this.state.entryFixComp.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("entry_peg_comp", this.state.entryPegComp.toLowerCase() === "iya" ? 1 : 0)
+      if (this.state.entryFixComp.toLowerCase() === "tidak") formData.append("entry_correct_fixture", this.state.entryCorrectFix)
+      formData.append("entry_peg_comp", this.state.entryPegComp.toLowerCase() === "iya" ? 0 : 1)
+      formData.append("entry_broken_hanger", this.state.entryBrokenHanger)
       formData.append("entry_pog_comp", this.state.entryPogComp.toLowerCase() === "iya" ? 1 : 0)
+      if (this.state.entryPogComp.toLowerCase() === "tidak") formData.append("entry_correct_pog", this.state.entryCorrectPog)
       formData.append("entry_pop_pic_1", this.state.entryPop1.toLowerCase() === "iya" ? 1 : 0)
       formData.append("entry_pop_pic_2", this.state.entryPop2.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("entry_google50k", this.state.entryGoogle50k.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("entry_google100k", this.state.entryGoogle100k.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("entry_google150k", this.state.entryGoogle150k.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("entry_google300k", this.state.entryGoogle300k.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("entry_google500k", this.state.entryGoogle500k.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("entry_spotify1M", this.state.entrySpotify1m.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("entry_spotify3M", this.state.entrySpotify3m.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("entry_google50k", this.state.entryGoogle50k.toLowerCase() === "iya" ? 15 : this.state.entryLotGoogle50k)
+      formData.append("entry_google100k", this.state.entryGoogle100k.toLowerCase() === "iya" ? 15 : this.state.entryLotGoogle100k)
+      formData.append("entry_google150k", this.state.entryGoogle150k.toLowerCase() === "iya" ? 15 : this.state.entryLotGoogle150k)
+      formData.append("entry_google300k", this.state.entryGoogle300k.toLowerCase() === "iya" ? 15 : this.state.entryLotGoogle300k)
+      formData.append("entry_google500k", this.state.entryGoogle500k.toLowerCase() === "iya" ? 15 : this.state.entryLotGoogle500k)
+      formData.append("entry_spotify1M", this.state.entrySpotify1m.toLowerCase() === "iya" ? 15 : this.state.entryLotSpotify1m)
+      formData.append("entry_spotify3M", this.state.entrySpotify3m.toLowerCase() === "iya" ? 15 : this.state.entryLotSpotify3m)
       formData.append("exit_fixture_comp", this.state.exitFixComp.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("exit_peg_comp", this.state.exitPegComp.toLowerCase() === "iya" ? 1 : 0)
+      if (this.state.exitFixComp.toLowerCase() === "tidak") formData.append("exit_correct_fixture", this.state.exitCorrectFix)
+      formData.append("exit_peg_comp", this.state.exitPegComp.toLowerCase() === "iya" ? 0 : 1)
+      formData.append("exit_broken_hanger", this.state.exitBrokenHanger)
       formData.append("exit_pog_comp", this.state.exitPogComp.toLowerCase() === "iya" ? 1 : 0)
+      if (this.state.exitPogComp.toLowerCase() === "tidak") formData.append("exit_correct_pog", this.state.exitCorrectPog)
       formData.append("exit_pop_pic_1", this.state.exitPop1.toLowerCase() === "iya" ? 1 : 0)
       formData.append("exit_pop_pic_2", this.state.exitPop2.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("exit_google50k", this.state.exitGoogle50k.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("exit_google100k", this.state.exitGoogle100k.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("exit_google150k", this.state.exitGoogle150k.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("exit_google300k", this.state.exitGoogle300k.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("exit_google500k", this.state.exitGoogle500k.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("exit_spotify1M", this.state.exitSpotify1m.toLowerCase() === "iya" ? 1 : 0)
-      formData.append("exit_spotify3M", this.state.exitSpotify3m.toLowerCase() === "iya" ? 1 : 0)
+      formData.append("exit_google50k", this.state.exitGoogle50k.toLowerCase() === "iya" ? 15 : this.state.exitLotGoogle50k)
+      formData.append("exit_google100k", this.state.exitGoogle100k.toLowerCase() === "iya" ? 15 : this.state.exitLotGoogle100k)
+      formData.append("exit_google150k", this.state.exitGoogle150k.toLowerCase() === "iya" ? 15 : this.state.exitLotGoogle150k)
+      formData.append("exit_google300k", this.state.exitGoogle300k.toLowerCase() === "iya" ? 15 : this.state.exitLotGoogle300k)
+      formData.append("exit_google500k", this.state.exitGoogle500k.toLowerCase() === "iya" ? 15 : this.state.exitLotGoogle500k)
+      formData.append("exit_spotify1M", this.state.exitSpotify1m.toLowerCase() === "iya" ? 15 : this.state.exitLotSpotify1m)
+      formData.append("exit_spotify3M", this.state.exitSpotify3m.toLowerCase() === "iya" ? 15 : this.state.exitLotSpotify3m)
       formData.append("assistants_name", this.state.assistName)
 
       formData.append("q1", this.state.giftCard.toLowerCase() === "iya" ? 1 : 0)
       formData.append("q2", this.state.aktifPOR.toLowerCase() === "iya" ? 1 : 0)
       formData.append("q3", this.state.changeCardGift.toLowerCase() === "iya" ? 1 : 0)
 
-      console.log("PROSES 1")
+      if (this.state.hasChangeNameStore) formData.append("store_name", this.state.nameStore)
+      if (this.state.hasChangeDc) formData.append("dc_id", this.state.idDC)
+      if (this.state.hasChangeCity) formData.append("city", this.state.city)
+      if (this.state.hasChangeAddress) formData.append("address", this.state.address)
 
       this.state.img_store && formData.append("files", {
         name: 'img_store.jpg',
@@ -245,32 +419,148 @@ class addVisit extends Component {
         uri: this.state.img_fixture_in.uri
       })
 
+      this.state.img_fixture_out && formData.append("files", {
+        name: 'img_fixture_out.jpg',
+        type: 'image/jpeg',
+        uri: this.state.img_fixture_out.uri
+      })
 
-      // formData.append("files", this.state.img_store, 'img_store')
-      // formData.append("files", this.state.img_fixture_in, 'img_fixture_in')
-      // formData.append("files", this.state.img_fixture_out, 'img_fixture_out')
-      console.log("PROSES 2")
+      // await API.post('/visit', formData, { headers: { token, "Content-Type": "multipart/form-data" }, timeout: 60000 })
+      await API.post('/visit', formData, { headers: { token } })
 
-      // formData.append("q4", req.body.q4)
-      API.post('/visit', formData,
-        {
-          headers: {
-            token
-          },
-        }
-      )
-        .then(data => {
-          this.resetForm()
-          this.props.navigation.navigate('Dashboard')
-        })
-        .catch(err => {
-          console.log(err)
-        })
+      Toast.show({
+        text: "Add data visit success",
+        buttonText: "Okay",
+        duration: 3000,
+        type: "success"
+      })
+
+      this.resetForm()
+      this.setState({
+        loading: false
+      })
+
+      this.props.route.params.refresh()
+      this.props.navigation.navigate('Dashboard')
     } catch (err) {
       console.log(err)
-      alert(err)
+      this.setState({
+        loading: false
+      })
 
+      if (err.message === "Request failed with status code 504") {
+        this.resetForm()
+        this.setState({
+          loading: false
+        })
+
+        Toast.show({
+          text: "Add data visit success",
+          buttonText: "Okay",
+          duration: 3000,
+          type: "success"
+        })
+
+        this.props.route.params.refresh()
+        this.props.navigation.navigate('Dashboard')
+      } else {
+        await this.pendingVisit()
+      }
     }
+  }
+
+  pendingVisit = async () => {
+    this.setState({
+      loading: true
+    })
+
+    let newArray =
+      [
+        ["visit_date", `${new Date()}`],
+        ["user_id", this.props.user_id],
+        ["store_code", this.state.idStore],
+        ["entry_fixture_comp", this.state.entryFixComp.toLowerCase() === "iya" ? 1 : 0],
+        ["entry_correct_fixture", this.state.entryCorrectFix],
+        ["entry_peg_comp", this.state.entryPegComp.toLowerCase() === "iya" ? 0 : 1],
+        ["entry_broken_hanger", this.state.entryBrokenHanger],
+        ["entry_pog_comp", this.state.entryPogComp.toLowerCase() === "iya" ? 1 : 0],
+        ["entry_correct_pog", this.state.entryCorrectPog],
+        ["entry_pop_pic_1", this.state.entryPop1.toLowerCase() === "iya" ? 1 : 0],
+        ["entry_pop_pic_2", this.state.entryPop2.toLowerCase() === "iya" ? 1 : 0],
+        ["entry_google50k", this.state.entryGoogle50k.toLowerCase() === "iya" ? 15 : this.state.entryLotGoogle50k],
+        ["entry_google100k", this.state.entryGoogle100k.toLowerCase() === "iya" ? 15 : this.state.entryLotGoogle100k],
+        ["entry_google150k", this.state.entryGoogle150k.toLowerCase() === "iya" ? 15 : this.state.entryLotGoogle150k],
+        ["entry_google300k", this.state.entryGoogle300k.toLowerCase() === "iya" ? 15 : this.state.entryLotGoogle300k],
+        ["entry_google500k", this.state.entryGoogle500k.toLowerCase() === "iya" ? 15 : this.state.entryLotGoogle500k],
+        ["entry_spotify1M", this.state.entrySpotify1m.toLowerCase() === "iya" ? 15 : this.state.entryLotSpotify1m],
+        ["entry_spotify3M", this.state.entrySpotify3m.toLowerCase() === "iya" ? 15 : this.state.entryLotSpotify3m],
+        ["exit_fixture_comp", this.state.exitFixComp.toLowerCase() === "iya" ? 1 : 0],
+        ["exit_correct_fixture", this.state.exitCorrectFix],
+        ["exit_peg_comp", this.state.exitPegComp.toLowerCase() === "iya" ? 0 : 1],
+        ["exit_broken_hanger", this.state.exitBrokenHanger],
+        ["exit_pog_comp", this.state.exitPogComp.toLowerCase() === "iya" ? 1 : 0],
+        ["exit_correct_pog", this.state.exitCorrectPog],
+        ["exit_pop_pic_1", this.state.exitPop1.toLowerCase() === "iya" ? 1 : 0],
+        ["exit_pop_pic_2", this.state.exitPop2.toLowerCase() === "iya" ? 1 : 0],
+        ["exit_google50k", this.state.exitGoogle50k.toLowerCase() === "iya" ? 15 : this.state.exitLotGoogle50k],
+        ["exit_google100k", this.state.exitGoogle100k.toLowerCase() === "iya" ? 15 : this.state.exitLotGoogle100k],
+        ["exit_google150k", this.state.exitGoogle150k.toLowerCase() === "iya" ? 15 : this.state.exitLotGoogle150k],
+        ["exit_google300k", this.state.exitGoogle300k.toLowerCase() === "iya" ? 15 : this.state.exitLotGoogle300k],
+        ["exit_google500k", this.state.exitGoogle500k.toLowerCase() === "iya" ? 15 : this.state.exitLotGoogle500k],
+        ["exit_spotify1M", this.state.exitSpotify1m.toLowerCase() === "iya" ? 15 : this.state.exitLotSpotify1m],
+        ["exit_spotify3M", this.state.exitSpotify3m.toLowerCase() === "iya" ? 15 : this.state.exitLotSpotify3m],
+        ["assistants_name", this.state.assistName],
+
+        ["q1", this.state.giftCard.toLowerCase() === "iya" ? 1 : 0],
+        ["q2", this.state.aktifPOR.toLowerCase() === "iya" ? 1 : 0],
+        ["q3", this.state.changeCardGift.toLowerCase() === "iya" ? 1 : 0],
+      ]
+
+    if (this.state.hasChangeNameStore) newArray.push(["store_name", this.state.nameStore])
+    if (this.state.hasChangeDc) newArray.push(["dc_id", this.state.idDC])
+    if (this.state.hasChangeCity) newArray.push(["city", this.state.city])
+    if (this.state.hasChangeAddress) newArray.push(["address", this.state.address])
+
+    if (this.state.img_store) newArray.push(["files", {
+      name: 'img_store.jpg',
+      type: 'image/jpeg',
+      uri: this.state.img_store.uri
+    }])
+
+    if (this.state.img_fixture_in) newArray.push(["files", {
+      name: 'img_fixture_in.jpg',
+      type: 'image/jpeg',
+      uri: this.state.img_fixture_in.uri
+    }])
+
+    if (this.state.img_fixture_out) newArray.push(["files", {
+      name: 'img_fixture_out.jpg',
+      type: 'image/jpeg',
+      uri: this.state.img_fixture_out.uri
+    }])
+
+    let listPendingVisit = await AsyncStorage.getItem('visit_pending')
+    if (listPendingVisit) listPendingVisit = JSON.parse(listPendingVisit)
+    else listPendingVisit = []
+
+    listPendingVisit.push(newArray)
+
+    await AsyncStorage.setItem('visit_pending', JSON.stringify(listPendingVisit))
+
+    Toast.show({
+      text: "Add data visit pending. There isn't connection",
+      buttonText: "Oke",
+      duration: 3000,
+      type: "warning"
+    })
+
+    setTimeout(() => {
+      this.props.route.params.refresh()
+      this.props.navigation.navigate('Dashboard')
+      this.setState({
+        loading: false
+      })
+    }, 3000)
   }
 
   launchCamera = (args) => {
@@ -279,9 +569,8 @@ class addVisit extends Component {
     }
     ImagePicker.launchCamera(options, (response) => {
       if (response.uri) {
-        console.log(response)
         this.setState({
-          img_store: response
+          [args]: response
           // filePath: response,
           // fileData: response.data,
           // fileUri: response.uri
@@ -289,37 +578,11 @@ class addVisit extends Component {
 
       }
     });
-
-  }
-
-  selectImage = () => {
-    const options = {
-      noData: true,
-    }
-
-    ImagePicker.launchImageLibrary(options, response => {
-      if (response.uri) {
-        console.log(response)
-        this.setState({ img_store: response })
-      }
-    })
-
   }
 
   onValueChangeNew = (name, value) => {
-    console.log(name, value)
     this.setState({
       [name]: value
-    })
-  }
-
-  takePicture = () => {
-    const options = {}
-
-    this.camera.capture({ metadata: options }).then((data) => {
-      console.log(data)
-    }).catch((error) => {
-      console.log(error)
     })
   }
 
@@ -334,15 +597,24 @@ class addVisit extends Component {
 
       idStore: '',
       entryFixComp: 'Iya',
-      entryPegComp: 'Iya',
+      entryCorrectFix: '',
+      entryPegComp: 'Tidak',
+      entryBrokenHanger: '0',
       entryPogComp: 'Iya',
       entryGoogle50k: 'Iya',
+      entryLotGoogle50k: '',
       entryGoogle100k: 'Iya',
+      entryLotGoogle100k: '',
       entryGoogle150k: 'Iya',
+      entryLotGoogle150k: '',
       entryGoogle300k: 'Iya',
+      entryLotGoogle300k: '',
       entryGoogle500k: 'Iya',
+      entryLotGoogle500k: '',
       entrySpotify1m: 'Iya',
+      entryLotSpotify1m: '',
       entrySpotify3m: 'Iya',
+      entryLotSpotify3m: '',
       entryPop1: 'Iya',
       entryPop2: 'Iya',
       assistName: '',
@@ -350,18 +622,39 @@ class addVisit extends Component {
       aktifPOR: 'Iya',
       changeCardGift: 'Iya',
       exitFixComp: 'Iya',
-      exitPegComp: 'Iya',
+      exitCorrectFix: '',
+      exitPegComp: 'Tidak',
+      exitBrokenHanger: '0',
       exitPogComp: 'Iya',
       exitGoogle50k: 'Iya',
+      exitLotGoogle50k: '',
       exitGoogle100k: 'Iya',
+      exitLotGoogle100k: '',
       exitGoogle150k: 'Iya',
+      exitLotGoogle150k: '',
       exitGoogle300k: 'Iya',
+      exitLotGoogle300k: '',
       exitGoogle500k: 'Iya',
+      exitLotGoogle500k: '',
       exitSpotify1m: 'Iya',
+      exitLotSpotify1m: '',
       exitSpotify3m: 'Iya',
+      exitLotSpotify3m: '',
       exitPop1: 'Iya',
       exitPop2: 'Iya',
+
+      imgPOG1: '',
+      imgPOG2: '',
+      imgFixture1: '',
+      imgFixture2: '',
+      imgPOP1: '',
+      imgPOP2: '',
     })
+  }
+
+  handleSelectItem = (item, index) => {
+    const { onDropdownClose } = this.props;
+    onDropdownClose();
   }
 
   render() {
@@ -374,21 +667,31 @@ class addVisit extends Component {
 
               {
                 this.state.newNotif
-                  ? <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} ref={ref => this.touchable = ref} onPress={() => this.showPopover()}>
-                    <>
-                      <Ionicons active name="ios-notifications" size={30} style={{ color: 'white' }} />
-                      <Badge style={{ height: 10 }}></Badge>
-                    </>
+                  ? <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} ref={ref => this.touchable = ref} onPress={() => this.showPopover()} underlayColor="transparent">
+                    <Image source={require('../asset/notif-new.png')} style={{
+                      height: 30,
+                      width: 33,
+                      resizeMode: 'stretch'
+                    }} />
                   </TouchableHighlight>
-                  : <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} ref={ref => this.touchable = ref} onPress={() => this.showPopover()}>
-                    <Ionicons active name="ios-notifications-outline" size={30} style={{ color: 'white' }} />
+                  : <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} ref={ref => this.touchable = ref} onPress={() => this.showPopover()} underlayColor="transparent">
+                    <Image source={require('../asset/notif.png')} style={{
+                      height: 27,
+                      width: 27,
+                      resizeMode: 'stretch'
+                    }} />
                   </TouchableHighlight>
               }
 
             </View>
             <TouchableHighlight style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} onPress={() => this.logout()} underlayColor="transparent">
               <>
-                <FontAwesome name='power-off' style={{ color: 'white', marginRight: 10 }} size={28} />
+                <Image source={require('../asset/logout.png')} style={{
+                  height: 27,
+                  width: 27,
+                  resizeMode: 'stretch',
+                  marginRight: 5
+                }} />
                 <Text style={{ fontSize: 18, color: 'white', fontWeight: 'bold' }}>Keluar</Text>
               </>
             </TouchableHighlight>
@@ -398,6 +701,7 @@ class addVisit extends Component {
           <View style={{ backgroundColor: 'white', height: '100%', marginTop: 20, padding: 0 }}>
             <ProgressSteps {...progressStepsStyle}>
 
+              {/* 1 */}
               <ProgressStep label="" nextBtnTextStyle={buttonTextStyle} previousBtnStyle={{ display: 'none' }}  >
                 <ScrollView>
                   <Form style={{ padding: 20, paddingTop: 0 }}>
@@ -408,10 +712,10 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.idRetailer}
-                          onValueChange={this.onValueChangeRetailer.bind(this)}
+                          onValueChange={(text) => this.onValueChangeNew('idRetailer', text)}
+
+                        // onValueChange={this.onValueChangeRetailer.bind(this)}
                         >
                           {
                             this.state.dataAllRetailer.length > 0 && this.state.dataAllRetailer.map(el =>
@@ -423,90 +727,130 @@ class addVisit extends Component {
                     </View>
                     <View id="idStore" style={{ marginBottom: 15 }}>
                       <Label>Store</Label>
-                      <Item picker>
-                        <Picker
-                          mode="dropdown"
-                          iosIcon={<Icon name="arrow-down" />}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
-                          selectedValue={this.state.idStore}
-                          onValueChange={this.onValueChangeStore.bind(this)}
-                        >
+                      <Input
+                        value={this.state.idStore}
+                        style={{ backgroundColor: '#F0F0F0' }}
+                        onChangeText={(text) => this.setState({
+                          idStore: text
+                        })}
+                      />
+                      {
+                        (this.state.showSuggestion && !this.state.hasSelectedStore) &&
+                        <List style={{ maxHeight: 250, width: '100%', borderWidth: 1, borderColor: 'black' }}>
                           {
                             this.state.dataAllStoreForDisplay.map(el =>
-                              <Picker.Item label={el.store_code} value={el.store_code} key={el.store_code} />
+                              <ListItem style={{ flexDirection: 'row', height: 50, alignItems: 'center', marginLeft: 0, paddingLeft: 8 }} key={el.store_code}>
+                                <TouchableHighlight underlayColor="transparent" style={{ width: '100%' }} onPress={() => this.setState({ idStore: el.store_code, hasSelectedStore: true })}>
+                                  <Text style={{ fontSize: 15 }}>{el.store_code}</Text>
+                                </TouchableHighlight>
+                              </ListItem>
                             )
                           }
-                        </Picker>
-                      </Item>
+                        </List>
+                      }
+
                     </View>
                     <View id="nameStore" style={{ marginBottom: 15 }}>
                       <Label>Store Name</Label>
                       <Input
                         value={this.state.nameStore}
                         style={{ backgroundColor: '#F0F0F0' }}
-                        disabled />
+                        onChangeText={(text) => this.setState({
+                          nameStore: text
+                        })}
+                        disabled={!this.state.hasSelectedStore}
+                      />
                     </View>
                     <View id="dc" style={{ marginBottom: 15 }}>
                       <Label>DC/Wilayah Store</Label>
-                      <Input
-                        value={this.state.dc}
-                        style={{ backgroundColor: '#F0F0F0' }}
-                        disabled />
+                      {
+                        this.state.hasSelectedStore
+                          ? <Item picker>
+                            <Picker
+                              mode="dropdown"
+                              iosIcon={<Icon name="arrow-down" />}
+                              style={{ backgroundColor: '#F0F0F0' }}
+                              selectedValue={this.state.idDC}
+                              onValueChange={(text) => this.onValueChangeNew('idDC', text)}
+                            >
+                              {
+                                this.state.dataAllDC.length > 0 && this.state.dataAllDC.map(el =>
+                                  <Picker.Item label={el.DC_name} value={el.id} key={el.id} />
+                                )
+                              }
+                            </Picker>
+                          </Item>
+                          : <Input
+                            value={this.state.idStore}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled
+                          />
+                      }
                     </View>
                     <View id="city" style={{ marginBottom: 15 }}>
                       <Label>City</Label>
                       <Input
                         value={this.state.city}
                         style={{ backgroundColor: '#F0F0F0' }}
-                        disabled />
+                        onChangeText={(text) => this.setState({
+                          city: text
+                        })}
+                        disabled={!this.state.hasSelectedStore}
+                      />
                     </View>
                     <View id="address" style={{ marginBottom: 15 }}>
                       <Label>Address</Label>
                       <Input
                         value={this.state.address}
                         style={{ backgroundColor: '#F0F0F0' }}
-                        disabled />
+                        onChangeText={(text) => this.setState({
+                          address: text
+                        })}
+                        disabled={!this.state.hasSelectedStore}
+                      />
                     </View>
-                    <View id="foto" style={{ marginBottom: 15 }}>
+                    <View id="foto">
                       <Label>Image Store</Label>
-                      <Button onPress={this.launchCamera}>
-                        <Text>Take Photo</Text>
-                      </Button>
-                      <Button onPress={this.selectImage}>
-                        <Text>Take Image</Text>
+                      {
+                        this.state.img_store
+                          ? <Image source={this.state.img_store} style={{
+                            width: '100%', height: 400,
+                            resizeMode: 'stretch'
+                          }} />
+                          : <Image source={require('../asset/placeholder-take-image.png')} style={{
+                            width: '100%', height: 300,
+                            resizeMode: 'stretch'
+                          }} />
+                      }
+                      <Button info onPress={() => this.launchCamera('img_store')} style={{ justifyContent: 'center', backgroundColor: '#0079C2' }}>
+                        <Text style={{ color: 'white' }}>Take Photo</Text>
                       </Button>
                     </View>
-                    {/* <Item>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={{ fontSize: 15 }}>Gambar</Text>
-                        <TouchableHighlight onPress={this.selectImage} style={styles.buttonChooseImage} underlayColor="transparent">
-                          <Text style={{ fontSize: 15 }}>Choose Image</Text>
-                        </TouchableHighlight>
-                      </View>
-                    </Item>
-                    <Image source={this.state.thumbnail} style={{
-                      alignSelf: 'center',
-                      width: 150,
-                      height: 150,
-                      margin: 20
-                    }} resizeMode={'stretch'} /> */}
                   </Form>
                 </ScrollView>
               </ProgressStep>
 
 
-
+              {/* 2 */}
               <ProgressStep label="" nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle}>
                 <ScrollView>
                   <Form style={{ padding: 20, paddingTop: 0 }}>
-                    <View id="foto" style={{ marginBottom: 15 }}>
+                    <View id="fotoEntFix" style={{ marginBottom: 15 }}>
                       <Label>Image Entry Fixture</Label>
-                      <Input
-                        value="BELUM"
-                        style={{ backgroundColor: '#F0F0F0' }}
-                        disabled />
+                      {
+                        this.state.img_fixture_in
+                          ? <Image source={this.state.img_fixture_in} style={{
+                            width: '100%', height: 400,
+                            resizeMode: 'stretch'
+                          }} />
+                          : <Image source={require('../asset/placeholder-take-image.png')} style={{
+                            width: '100%', height: 300,
+                            resizeMode: 'stretch'
+                          }} />
+                      }
+                      <Button info onPress={() => this.launchCamera('img_fixture_in')} style={{ justifyContent: 'center', backgroundColor: '#0079C2' }}>
+                        <Text style={{ color: 'white' }}>Take Photo</Text>
+                      </Button>
                     </View>
                     <View id="entryFixComp" style={{ marginBottom: 15 }}>
                       <Label>Apakah itu cocok dengan apa yang ada di aplikasi?</Label>
@@ -516,8 +860,6 @@ class addVisit extends Component {
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
                           placeholder="Select your SIM"
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.entryFixComp}
                           onValueChange={(text) => this.onValueChangeNew('entryFixComp', text)}
                         >
@@ -527,18 +869,48 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
-                    <View id="fotoFixTrait" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                      <Text> FOTO FIXTURE TRAITS</Text>
+                    {
+                      this.state.entryFixComp === "Tidak" && <View id="entryCorrectFix" style={{ marginBottom: 15 }}>
+                        <Label>Fixture yang ada dilapangan ?</Label>
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.entryCorrectFix}
+                            onValueChange={(text) => this.onValueChangeNew('entryCorrectFix', text)}
+                          >
+                            {
+                              this.state.dataFixtureType.map(el =>
+                                <Picker.Item label={el.fixture_type} value={el.id} key={"fix" + el.id} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
+                      </View>
+                    }
+
+                    <View id="fotoFixTrait" style={{ marginBottom: 15 }}>
+                      <Label>Foto Fixture Traits</Label>
+                      {
+                        this.state.imgFixture1
+                          ? <Image source={{ uri: `${BaseURL}/${this.state.imgFixture1}` }} style={{
+                            width: '100%', height: 400,
+                            resizeMode: 'stretch'
+                          }} />
+                          : <Image source={require('../asset/placeholder.png')} style={{
+                            width: '100%', height: 300,
+                            resizeMode: 'stretch'
+                          }} />
+                      }
                     </View>
                     <View id="entryPEGComp" style={{ marginBottom: 15 }}>
-                      <Label>Apakah jumlah PEG sudah benar ?</Label>
+                      <Label>Adakah gantungan yang rusak ?</Label>
                       <Item picker>
                         <Picker
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.entryPegComp}
                           onValueChange={(text) => this.onValueChangeNew('entryPegComp', text)}
                         >
@@ -548,8 +920,31 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
-                    <View id="fotoPOG" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                      <Text> FOTO POG</Text>
+                    {
+                      this.state.entryPegComp === "Iya" && <View id="entryBrokenHanger" style={{ marginBottom: 15 }}>
+                        <Label>Berapa gantungan yang rusak ?</Label>
+                        <Input
+                          value={this.state.entryBrokenHanger}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            entryBrokenHanger: text
+                          })} />
+                      </View>
+                    }
+
+                    <View id="fotoPOG" style={{ marginBottom: 15 }}>
+                      <Label>Foto POG</Label>
+                      {
+                        this.state.imgPOG1
+                          ? <Image source={{ uri: `${BaseURL}/${this.state.imgPOG1}` }} style={{
+                            width: '100%', height: 400,
+                            resizeMode: 'stretch'
+                          }} />
+                          : <Image source={require('../asset/placeholder.png')} style={{
+                            width: '100%', height: 300,
+                            resizeMode: 'stretch'
+                          }} />
+                      }
                     </View>
                     <View id="entryPOGComp" style={{ marginBottom: 15 }}>
                       <Label>Apakah POG Terpasang dengan benar ?</Label>
@@ -558,8 +953,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.entryPogComp}
                           onValueChange={(text) => this.onValueChangeNew('entryPogComp', text)}
                         >
@@ -569,6 +962,34 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.entryPogComp === "Tidak" && <View id="entryCorrectPog" style={{ marginBottom: 15 }}>
+                        <Label>Keadaan POG dilapangan ?</Label>
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.entryCorrectPog}
+                            onValueChange={(text) => this.onValueChangeNew('entryCorrectPog', text)}
+                          >
+                            <Picker.Item label="Messy" value="Messy" />
+                            <Picker.Item label="Missing Pegs" value="Missing Pegs" />
+                            <Picker.Item label="Other Product" value="Other Product" />
+                          </Picker>
+                        </Item>
+                      </View>
+                    }
+
+                    <View id="instockComp" style={{ height: 50, width: '100%', backgroundColor: '#afbd20', justifyContent: 'center', paddingLeft: 10, marginBottom: 10, marginTop: 5 }}>
+                      <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 18 }}>In-stock Compliance</Text>
+                    </View>
+
+                    <View style={{ marginBottom: 15 }}>
+                      <Text>Jika kartu lebih dari 15 maka pilih Iya,</Text>
+                      <Text>jika kartu kurang dari 15 maka pilih Tidak</Text>
+                    </View>
+
                     <View id="entryGoogle50k" style={{ marginBottom: 15 }}>
                       <Label>Google 50k?</Label>
                       <Item picker>
@@ -576,8 +997,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.entryGoogle50k}
                           onValueChange={(text) => this.onValueChangeNew('entryGoogle50k', text)}
                         >
@@ -587,6 +1006,18 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.entryGoogle50k === "Tidak" && <View id="entryLotGoogle50k" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Google50K?</Label>
+                        <Input
+                          value={this.state.entryLotGoogle50k}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            entryLotGoogle50k: text
+                          })} />
+                      </View>
+                    }
+
                     <View id="entryGoogle100k" style={{ marginBottom: 15 }}>
                       <Label>Google 100k?</Label>
                       <Item picker>
@@ -594,8 +1025,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.entryGoogle100k}
                           onValueChange={(text) => this.onValueChangeNew('entryGoogle100k', text)}
                         >
@@ -605,6 +1034,18 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.entryGoogle100k === "Tidak" && <View id="entryLotGoogle100k" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Google100K?</Label>
+                        <Input
+                          value={this.state.entryLotGoogle100k}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            entryLotGoogle100k: text
+                          })} />
+                      </View>
+                    }
+
                     <View id="entryGoogle150k" style={{ marginBottom: 15 }}>
                       <Label>Google 150k?</Label>
                       <Item picker>
@@ -612,8 +1053,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.entryGoogle150k}
                           onValueChange={(text) => this.onValueChangeNew('entryGoogle150k', text)}
                         >
@@ -623,6 +1062,18 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.entryGoogle150k === "Tidak" && <View id="entryLotGoogle150k" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Google150K?</Label>
+                        <Input
+                          value={this.state.entryLotGoogle150k}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            entryLotGoogle150k: text
+                          })} />
+                      </View>
+                    }
+
                     <View id="entryGoogle300k" style={{ marginBottom: 15 }}>
                       <Label>Google 300k?</Label>
                       <Item picker>
@@ -630,8 +1081,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.entryGoogle300k}
                           onValueChange={(text) => this.onValueChangeNew('entryGoogle300k', text)}
                         >
@@ -641,6 +1090,18 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.entryGoogle300k === "Tidak" && <View id="entryLotGoogle300k" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Google300K?</Label>
+                        <Input
+                          value={this.state.entryLotGoogle300k}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            entryLotGoogle300k: text
+                          })} />
+                      </View>
+                    }
+
                     <View id="entryGoogle500k" style={{ marginBottom: 15 }}>
                       <Label>Google 500k?</Label>
                       <Item picker>
@@ -648,8 +1109,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.entryGoogle500k}
                           onValueChange={(text) => this.onValueChangeNew('entryGoogle500k', text)}
                         >
@@ -659,6 +1118,18 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.entryGoogle500k === "Tidak" && <View id="entryLotGoogle500k" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Google500K?</Label>
+                        <Input
+                          value={this.state.entryLotGoogle500k}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            entryLotGoogle500k: text
+                          })} />
+                      </View>
+                    }
+
                     <View id="entrySpotify1m" style={{ marginBottom: 15 }}>
                       <Label>Spotify 1m ?</Label>
                       <Item picker>
@@ -666,8 +1137,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.entrySpotify1m}
                           onValueChange={(text) => this.onValueChangeNew('entrySpotify1m', text)}
                         >
@@ -677,6 +1146,18 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.entrySpotify1m === "Tidak" && <View id="entryLotSpotify1m" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Spotify1M?</Label>
+                        <Input
+                          value={this.state.entryLotSpotify1m}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            entryLotSpotify1m: text
+                          })} />
+                      </View>
+                    }
+
                     <View id="entrySpotify3m" style={{ marginBottom: 15 }}>
                       <Label>Spotify 3m ?</Label>
                       <Item picker>
@@ -684,8 +1165,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.entrySpotify3m}
                           onValueChange={(text) => this.onValueChangeNew('entrySpotify3m', text)}
                         >
@@ -695,8 +1174,35 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
-                    <View id="fotoPop1" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                      <Text> FOTO POP 1</Text>
+                    {
+                      this.state.entrySpotify3m === "Tidak" && <View id="entryLotSpotify3m" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Spotify3M?</Label>
+                        <Input
+                          value={this.state.entryLotSpotify3m}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            entryLotSpotify3m: text
+                          })} />
+                      </View>
+                    }
+
+                    <View id="fotoPOP1" style={{ marginBottom: 15 }}>
+                      {
+                        this.state.idRetailer === 1
+                          ? <Label>Foto Promotion 1</Label>
+                          : <Label>Foto Promotion</Label>
+                      }
+                      {
+                        this.state.imgPOP1
+                          ? <Image source={{ uri: `${BaseURL}/${this.state.imgPOP1}` }} style={{
+                            width: '100%', height: 400,
+                            resizeMode: 'stretch'
+                          }} />
+                          : <Image source={require('../asset/placeholder.png')} style={{
+                            width: '100%', height: 300,
+                            resizeMode: 'stretch'
+                          }} />
+                      }
                     </View>
                     <View id="entryPop1" style={{ marginBottom: 15 }}>
                       <Label>Apakah (Grafik fixture teratas) cocok dengan gambar ini ?</Label>
@@ -705,8 +1211,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.entryPop1}
                           onValueChange={(text) => this.onValueChangeNew('entryPop1', text)}
                         >
@@ -718,8 +1222,19 @@ class addVisit extends Component {
 
                     {
                       this.state.idRetailer === 1 && <>
-                        <View id="fotoPOP2" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                          <Text> FOTO POP 2</Text>
+                        <View id="fotoPOP2" style={{ marginBottom: 15 }}>
+                          <Label>Foto Promotion 2</Label>
+                          {
+                            this.state.imgPOP2
+                              ? <Image source={{ uri: `${BaseURL}/${this.state.imgPOP2}` }} style={{
+                                width: '100%', height: 400,
+                                resizeMode: 'stretch'
+                              }} />
+                              : <Image source={require('../asset/placeholder.png')} style={{
+                                width: '100%', height: 300,
+                                resizeMode: 'stretch'
+                              }} />
+                          }
                         </View>
                         <View id="entryPop2" style={{ marginBottom: 15 }}>
                           <Label>Apakah (Grafik fixture teratas) cocok dengan gambar ini ?</Label>
@@ -728,8 +1243,6 @@ class addVisit extends Component {
                               mode="dropdown"
                               iosIcon={<Icon name="arrow-down" />}
                               style={{ backgroundColor: '#F0F0F0' }}
-                              placeholderStyle={{ color: "#bfc6ea" }}
-                              placeholderIconColor="#007aff"
                               selectedValue={this.state.entryPop2}
                               onValueChange={(text) => this.onValueChangeNew('entryPop2', text)}
                             >
@@ -741,9 +1254,10 @@ class addVisit extends Component {
                       </>
                     }
 
-                    <View id="knowledge" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                      <Text> Knowledge</Text>
+                    <View id="knowledge" style={{ height: 50, width: '100%', backgroundColor: '#afbd20', justifyContent: 'center', paddingLeft: 10, marginBottom: 10, marginTop: 5 }}>
+                      <Text style={{ color: 'white', fontWeight: 'bold' }}>Knowledge</Text>
                     </View>
+
 
                     <View id="assistName" style={{ marginBottom: 15 }}>
                       <Label>Siapa nama asisten toko ?</Label>
@@ -762,8 +1276,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.giftCard}
                           onValueChange={(text) => this.onValueChangeNew('giftCard', text)}
                         >
@@ -780,8 +1292,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.aktifPOR}
                           onValueChange={(text) => this.onValueChangeNew('aktifPOR', text)}
                         >
@@ -798,8 +1308,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.changeCardGift}
                           onValueChange={(text) => this.onValueChangeNew('changeCardGift', text)}
                         >
@@ -813,21 +1321,47 @@ class addVisit extends Component {
               </ProgressStep>
 
 
-
+              {/* 3 */}
               <ProgressStep label="" nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle}>
-                <Text>SKIP</Text>
+                <View style={{ padding: 20, paddingTop: 10 }}>
+
+                  <View style={{ flexDirection: 'row' }}>
+                    <Text style={{ width: 25, fontSize: 18 }}>1.</Text>
+                    <Text style={{ fontSize: 18 }}>Periksa keadaan gantungan</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row' }}>
+                    <Text style={{ width: 25, fontSize: 18 }}>2.</Text>
+                    <Text style={{ fontSize: 18 }}>Perhatikan apakah fixture di tempatkan pada posisi yang benar</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row' }}>
+                    <Text style={{ width: 25, fontSize: 18 }}>3.</Text>
+                    <Text style={{ fontSize: 18 }}>Tanyakan kepada asisten toko frequensi pembelian voucher</Text>
+                  </View>
+                </View>
               </ProgressStep>
 
 
+              {/* 4 */}
               <ProgressStep label="" nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle}>
                 <ScrollView>
                   <Form style={{ padding: 20, paddingTop: 0 }}>
-                    <View id="foto" style={{ marginBottom: 15 }}>
+                    <View id="fotoExFix" style={{ marginBottom: 15 }}>
                       <Label>Image Exit Fixture</Label>
-                      <Input
-                        value="BELUM"
-                        style={{ backgroundColor: '#F0F0F0' }}
-                        disabled />
+                      {
+                        this.state.img_fixture_out
+                          ? <Image source={this.state.img_fixture_out} style={{
+                            width: '100%', height: 400,
+                            resizeMode: 'stretch'
+                          }} />
+                          : <Image source={require('../asset/placeholder-take-image.png')} style={{
+                            width: '100%', height: 300,
+                            resizeMode: 'stretch'
+                          }} />
+                        // :<Text>KOSONG</Text>
+                      }
+                      <Button info onPress={() => this.launchCamera('img_fixture_out')} style={{ justifyContent: 'center', backgroundColor: '#0079C2' }}>
+                        <Text style={{ color: 'white' }}>Take Photo</Text>
+                      </Button>
                     </View>
                     <View id="exitFixComp" style={{ marginBottom: 15 }}>
                       <Label>Apakah itu cocok dengan apa yang ada di aplikasi?</Label>
@@ -836,8 +1370,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.exitFixComp}
                           onValueChange={(text) => this.onValueChangeNew('exitFixComp', text)}
                         >
@@ -847,18 +1379,48 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
-                    <View id="fotoFixTrait" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                      <Text> FOTO FIXTURE TRAITS</Text>
+                    {
+                      this.state.exitFixComp === "Tidak" && <View id="exitCorrectFix" style={{ marginBottom: 15 }}>
+                        <Label>Fixture yang ada dilapangan ?</Label>
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.exitCorrectFix}
+                            onValueChange={(text) => this.onValueChangeNew('exitCorrectFix', text)}
+                          >
+                            {
+                              this.state.dataFixtureType.map(el =>
+                                <Picker.Item label={el.fixture_type} value={el.id} key={"fix" + el.id} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
+                      </View>
+                    }
+
+                    <View id="fotoFixTrait" style={{ marginBottom: 15 }}>
+                      <Label>Foto Fixture Traits</Label>
+                      {
+                        this.state.imgFixture1
+                          ? <Image source={{ uri: `${BaseURL}/${this.state.imgFixture1}` }} style={{
+                            width: '100%', height: 400,
+                            resizeMode: 'stretch'
+                          }} />
+                          : <Image source={require('../asset/placeholder.png')} style={{
+                            width: '100%', height: 300,
+                            resizeMode: 'stretch'
+                          }} />
+                      }
                     </View>
                     <View id="exitPEGComp" style={{ marginBottom: 15 }}>
-                      <Label>Apakah jumlah PEG sudah benar ?</Label>
+                      <Label>Adakah gantungan yang rusak ?</Label>
                       <Item picker>
                         <Picker
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.exitPegComp}
                           onValueChange={(text) => this.onValueChangeNew('exitPegComp', text)}
                         >
@@ -868,8 +1430,31 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
-                    <View id="fotoPOG" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                      <Text> FOTO POG</Text>
+                    {
+                      this.state.exitPegComp === "Iya" && <View id="exitBrokenHanger" style={{ marginBottom: 15 }}>
+                        <Label>Berapa gantungan yang rusak ?</Label>
+                        <Input
+                          value={this.state.exitBrokenHanger}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            exitBrokenHanger: text
+                          })} />
+                      </View>
+                    }
+
+                    <View id="fotoExPOG" style={{ marginBottom: 15 }}>
+                      <Label>Foto POG</Label>
+                      {
+                        this.state.imgPOG1
+                          ? <Image source={{ uri: `${BaseURL}/${this.state.imgPOG1}` }} style={{
+                            width: '100%', height: 400,
+                            resizeMode: 'stretch'
+                          }} />
+                          : <Image source={require('../asset/placeholder.png')} style={{
+                            width: '100%', height: 300,
+                            resizeMode: 'stretch'
+                          }} />
+                      }
                     </View>
                     <View id="exitPOGComp" style={{ marginBottom: 15 }}>
                       <Label>Apakah POG Terpasang dengan benar ?</Label>
@@ -878,8 +1463,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.exitPogComp}
                           onValueChange={(text) => this.onValueChangeNew('exitPogComp', text)}
                         >
@@ -889,6 +1472,34 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.exitPogComp === "Tidak" && <View id="exitCorrectPog" style={{ marginBottom: 15 }}>
+                        <Label>Keadaan POG dilapangan ?</Label>
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.exitCorrectPog}
+                            onValueChange={(text) => this.onValueChangeNew('exitCorrectPog', text)}
+                          >
+                            <Picker.Item label="Messy" value="Messy" />
+                            <Picker.Item label="Missing Pegs" value="Missing Pegs" />
+                            <Picker.Item label="Other Product" value="Other Product" />
+                          </Picker>
+                        </Item>
+                      </View>
+                    }
+
+                    <View id="instockComp2" style={{ height: 50, width: '100%', backgroundColor: '#afbd20', justifyContent: 'center', paddingLeft: 10, marginBottom: 10, marginTop: 5 }}>
+                      <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 18 }}>In-stock Compliance</Text>
+                    </View>
+
+                    <View style={{ marginBottom: 15 }}>
+                      <Text>Jika kartu lebih dari 15 maka pilih Iya,</Text>
+                      <Text>jika kartu kurang dari 15 maka pilih Tidak</Text>
+                    </View>
+
                     <View id="exitGoogle50k" style={{ marginBottom: 15 }}>
                       <Label>Google 50k?</Label>
                       <Item picker>
@@ -896,8 +1507,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.exitGoogle50k}
                           onValueChange={(text) => this.onValueChangeNew('exitGoogle50k', text)}
                         >
@@ -907,6 +1516,18 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.exitGoogle50k === "Tidak" && <View id="exitLotGoogle50k" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Google50K?</Label>
+                        <Input
+                          value={this.state.exitLotGoogle50k}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            exitLotGoogle50k: text
+                          })} />
+                      </View>
+                    }
+
                     <View id="exitGoogle100k" style={{ marginBottom: 15 }}>
                       <Label>Google 100k?</Label>
                       <Item picker>
@@ -914,8 +1535,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.exitGoogle100k}
                           onValueChange={(text) => this.onValueChangeNew('exitGoogle100k', text)}
                         >
@@ -925,6 +1544,18 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.exitGoogle100k === "Tidak" && <View id="exitLotGoogle100k" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Google100K?</Label>
+                        <Input
+                          value={this.state.exitLotGoogle100k}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            exitLotGoogle100k: text
+                          })} />
+                      </View>
+                    }
+
                     <View id="exitGoogle150k" style={{ marginBottom: 15 }}>
                       <Label>Google 150k?</Label>
                       <Item picker>
@@ -932,8 +1563,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.exitGoogle150k}
                           onValueChange={(text) => this.onValueChangeNew('exitGoogle150k', text)}
                         >
@@ -943,6 +1572,18 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.exitGoogle150k === "Tidak" && <View id="exitLotGoogle150k" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Google150K?</Label>
+                        <Input
+                          value={this.state.exitLotGoogle150k}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            exitLotGoogle150k: text
+                          })} />
+                      </View>
+                    }
+
                     <View id="exitGoogle300k" style={{ marginBottom: 15 }}>
                       <Label>Google 300k?</Label>
                       <Item picker>
@@ -950,8 +1591,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.exitGoogle300k}
                           onValueChange={(text) => this.onValueChangeNew('exitGoogle300k', text)}
                         >
@@ -961,6 +1600,18 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.exitGoogle300k === "Tidak" && <View id="exitLotGoogle300k" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Google300K?</Label>
+                        <Input
+                          value={this.state.exitLotGoogle300k}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            exitLotGoogle300k: text
+                          })} />
+                      </View>
+                    }
+
                     <View id="exitGoogle500k" style={{ marginBottom: 15 }}>
                       <Label>Google 500k?</Label>
                       <Item picker>
@@ -968,8 +1619,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.exitGoogle500k}
                           onValueChange={(text) => this.onValueChangeNew('exitGoogle500k', text)}
                         >
@@ -979,6 +1628,18 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.exitGoogle500k === "Tidak" && <View id="exitLotGoogle500k" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Google500K?</Label>
+                        <Input
+                          value={this.state.exitLotGoogle500k}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            exitLotGoogle500k: text
+                          })} />
+                      </View>
+                    }
+
                     <View id="exitSpotify1m" style={{ marginBottom: 15 }}>
                       <Label>Spotify 1m ?</Label>
                       <Item picker>
@@ -986,8 +1647,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.exitSpotify1m}
                           onValueChange={(text) => this.onValueChangeNew('exitSpotify1m', text)}
                         >
@@ -997,6 +1656,18 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
+                    {
+                      this.state.exitSpotify1m === "Tidak" && <View id="exitLotSpotify1m" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Spotify1M?</Label>
+                        <Input
+                          value={this.state.exitLotSpotify1m}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            exitLotSpotify1m: text
+                          })} />
+                      </View>
+                    }
+
                     <View id="exitSpotify3m" style={{ marginBottom: 15 }}>
                       <Label>Spotify 3m ?</Label>
                       <Item picker>
@@ -1004,8 +1675,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.exitSpotify3m}
                           onValueChange={(text) => this.onValueChangeNew('exitSpotify3m', text)}
                         >
@@ -1015,8 +1684,35 @@ class addVisit extends Component {
                       </Item>
                     </View>
 
-                    <View id="fotoPop1" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                      <Text> FOTO POP 1</Text>
+                    {
+                      this.state.exitSpotify3m === "Tidak" && <View id="exitLotSpotify3m" style={{ marginBottom: 15 }}>
+                        <Label>Sisa gantungan Spotify3M?</Label>
+                        <Input
+                          value={this.state.exitLotSpotify3m}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          onChangeText={(text) => this.setState({
+                            exitLotSpotify3m: text
+                          })} />
+                      </View>
+                    }
+
+                    <View id="fotoExPop1" style={{ marginBottom: 15 }}>
+                      {
+                        this.state.idRetailer === 1
+                          ? <Label>Foto Promotion 1</Label>
+                          : <Label>Foto Promotion</Label>
+                      }
+                      {
+                        this.state.imgPOP1
+                          ? <Image source={{ uri: `${BaseURL}/${this.state.imgPOP1}` }} style={{
+                            width: '100%', height: 400,
+                            resizeMode: 'stretch'
+                          }} />
+                          : <Image source={require('../asset/placeholder.png')} style={{
+                            width: '100%', height: 300,
+                            resizeMode: 'stretch'
+                          }} />
+                      }
                     </View>
                     <View id="exitPop1" style={{ marginBottom: 15 }}>
                       <Label>Apakah (Grafik fixture teratas) cocok dengan gambar ini ?</Label>
@@ -1025,8 +1721,6 @@ class addVisit extends Component {
                           mode="dropdown"
                           iosIcon={<Icon name="arrow-down" />}
                           style={{ backgroundColor: '#F0F0F0' }}
-                          placeholderStyle={{ color: "#bfc6ea" }}
-                          placeholderIconColor="#007aff"
                           selectedValue={this.state.exitPop1}
                           onValueChange={(text) => this.onValueChangeNew('exitPop1', text)}
                         >
@@ -1038,8 +1732,19 @@ class addVisit extends Component {
 
                     {
                       this.state.idRetailer === 1 && <>
-                        <View id="fotoPOP2" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                          <Text> FOTO POP 2</Text>
+                        <View id="fotoPOP1" style={{ marginBottom: 15 }}>
+                          <Label>Foto Promotion 2</Label>
+                          {
+                            this.state.imgPOP2
+                              ? <Image source={{ uri: `${BaseURL}/${this.state.imgPOP2}` }} style={{
+                                width: '100%', height: 400,
+                                resizeMode: 'stretch'
+                              }} />
+                              : <Image source={require('../asset/placeholder.png')} style={{
+                                width: '100%', height: 300,
+                                resizeMode: 'stretch'
+                              }} />
+                          }
                         </View>
                         <View id="exitPop2" style={{ marginBottom: 15 }}>
                           <Label>Apakah (Grafik fixture teratas) cocok dengan gambar ini ?</Label>
@@ -1048,8 +1753,6 @@ class addVisit extends Component {
                               mode="dropdown"
                               iosIcon={<Icon name="arrow-down" />}
                               style={{ backgroundColor: '#F0F0F0' }}
-                              placeholderStyle={{ color: "#bfc6ea" }}
-                              placeholderIconColor="#007aff"
                               selectedValue={this.state.exitPop2}
                               onValueChange={(text) => this.onValueChangeNew('exitPop2', text)}
                             >
@@ -1065,6 +1768,7 @@ class addVisit extends Component {
               </ProgressStep>
 
 
+              {/* 5 */}
               <ProgressStep label="" onSubmit={this.submit} nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle}>
                 <ScrollView>
                   <Form style={{ padding: 20, paddingTop: 0 }}>
@@ -1092,10 +1796,30 @@ class addVisit extends Component {
                       </View>
                       <View id="dcRekap" style={{ marginBottom: 15 }}>
                         <Label>DC/Wilayah Store</Label>
-                        <Input
-                          value={this.state.dc}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          disabled />
+                        {
+                          this.state.hasSelectedStore
+                            ? <Item picker>
+                              <Picker
+                                mode="dropdown"
+                                iosIcon={<Icon name="arrow-down" />}
+                                style={{ backgroundColor: '#F0F0F0' }}
+                                selectedValue={this.state.idDC}
+                                onValueChange={(text) => this.onValueChangeNew('idDC', text)}
+                                disabled
+                              >
+                                {
+                                  this.state.dataAllDC.length > 0 && this.state.dataAllDC.map(el =>
+                                    <Picker.Item label={el.DC_name} value={el.id} key={el.id} />
+                                  )
+                                }
+                              </Picker>
+                            </Item>
+                            : <Input
+                              value={this.state.idStore}
+                              style={{ backgroundColor: '#F0F0F0' }}
+                              disabled
+                            />
+                        }
                       </View>
                       <View id="cityRekap" style={{ marginBottom: 15 }}>
                         <Label>City</Label>
@@ -1111,25 +1835,39 @@ class addVisit extends Component {
                           style={{ backgroundColor: '#F0F0F0' }}
                           disabled />
                       </View>
-                      <View id="fotoTokoRekap" style={{ marginBottom: 15 }}>
+                      <View id="fotoTokoRekap1" style={{ marginBottom: 15 }}>
                         <Label>Image Store</Label>
-                        <Input
-                          value="BELUM"
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          disabled />
+                        {
+                          this.state.img_store
+                            ? <Image source={this.state.img_store} style={{
+                              width: '100%', height: 400,
+                              resizeMode: 'stretch'
+                            }} />
+                            : <Image source={require('../asset/placeholder-take-image.png')} style={{
+                              width: '100%', height: 300,
+                              resizeMode: 'stretch'
+                            }} />
+                        }
                       </View>
                     </>
 
                     <>
-                      <View id="fotoRekap" style={{ marginBottom: 15 }}>
+                      <View id="fotoFixInRekap" style={{ marginBottom: 15 }}>
                         <Label>Image Entry Fixture</Label>
-                        <Input
-                          value="BELUM"
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          disabled />
+                        {
+                          this.state.img_fixture_in
+                            ? <Image source={this.state.img_fixture_in} style={{
+                              width: '100%', height: 400,
+                              resizeMode: 'stretch'
+                            }} />
+                            : <Image source={require('../asset/placeholder-take-image.png')} style={{
+                              width: '100%', height: 300,
+                              resizeMode: 'stretch'
+                            }} />
+                        }
                       </View>
-                      <View id="entryFixCompRekap" style={{ marginBottom: 15 }}>
 
+                      <View id="entryFixCompRekap" style={{ marginBottom: 15 }}>
                         <Label>Apakah itu cocok dengan apa yang ada di aplikasi?</Label>
                         <Input
                           value={this.state.entryFixComp}
@@ -1137,19 +1875,73 @@ class addVisit extends Component {
                           disabled />
                       </View>
 
-                      <View id="fotoFixTraitRekap" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                        <Text> FOTO FIXTURE TRAITS</Text>
+                      {
+                        this.state.entryFixComp === "Tidak" && <View id="rekapEntryCorrectFix" style={{ marginBottom: 15 }}>
+                          <Label>Fixture yang ada dilapangan ?</Label>
+                          <Item picker>
+                            <Picker
+                              mode="dropdown"
+                              iosIcon={<Icon name="arrow-down" />}
+                              style={{ backgroundColor: '#F0F0F0' }}
+                              selectedValue={this.state.entryCorrectFix}
+                              onValueChange={(text) => this.onValueChangeNew('entryCorrectFix', text)}
+                              disabled
+                            >
+                              {
+                                this.state.dataFixtureType.map(el =>
+                                  <Picker.Item label={el.fixture_type} value={el.id} key={"fix" + el.id} />
+                                )
+                              }
+                            </Picker>
+                          </Item>
+                        </View>
+                      }
+
+                      <View id="fotoFixTraitRekap" style={{ marginBottom: 15 }}>
+                        <Label>Foto Fixture Traits</Label>
+                        {
+                          this.state.imgFixture1
+                            ? <Image source={{ uri: `${BaseURL}/${this.state.imgFixture1}` }} style={{
+                              width: '100%', height: 400,
+                              resizeMode: 'stretch'
+                            }} />
+                            : <Image source={require('../asset/placeholder.png')} style={{
+                              width: '100%', height: 300,
+                              resizeMode: 'stretch'
+                            }} />
+                        }
                       </View>
                       <View id="entryPEGCompRekap" style={{ marginBottom: 15 }}>
-                        <Label>Apakah jumlah PEG sudah benar ?</Label>
+                        <Label>Adakah gantungan yang rusak ?</Label>
                         <Input
                           value={this.state.entryPegComp}
                           style={{ backgroundColor: '#F0F0F0' }}
                           disabled />
                       </View>
 
-                      <View id="fotoPOGRekap" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                        <Text> FOTO POG</Text>
+                      {
+                        this.state.entryPegComp === "Iya" && <View id="entryBrokenHanger" style={{ marginBottom: 15 }}>
+                          <Label>Berapa gantungan yang rusak ?</Label>
+                          <Input
+                            value={this.state.entryBrokenHanger}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
+
+                      <View id="fotoPOGRekap1" style={{ marginBottom: 15 }}>
+                        <Label>Foto POG</Label>
+                        {
+                          this.state.imgPOG1
+                            ? <Image source={{ uri: `${BaseURL}/${this.state.imgPOG1}` }} style={{
+                              width: '100%', height: 400,
+                              resizeMode: 'stretch'
+                            }} />
+                            : <Image source={require('../asset/placeholder.png')} style={{
+                              width: '100%', height: 300,
+                              resizeMode: 'stretch'
+                            }} />
+                        }
                       </View>
                       <View id="entryPOGCompRekap" style={{ marginBottom: 15 }}>
                         <Label>Apakah POG Terpasang dengan benar ?</Label>
@@ -1157,6 +1949,25 @@ class addVisit extends Component {
                           value={this.state.entryPogComp}
                           style={{ backgroundColor: '#F0F0F0' }}
                           disabled />
+                      </View>
+
+                      {
+                        this.state.entryPogComp === "Tidak" && <View id="entryCorrectPogRekap" style={{ marginBottom: 15 }}>
+                          <Label>Keadaan POG dilapangan ?</Label>
+                          <Input
+                            value={this.state.entryCorrectPogRekap}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
+
+                      <View id="instockCompRekap1" style={{ height: 50, width: '100%', backgroundColor: '#afbd20', justifyContent: 'center', paddingLeft: 10, marginBottom: 10, marginTop: 5 }}>
+                        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 18 }}>In-stock Compliance</Text>
+                      </View>
+
+                      <View style={{ marginBottom: 15 }}>
+                        <Text>Jika kartu lebih dari 15 maka pilih Iya,</Text>
+                        <Text>jika kartu kurang dari 15 maka pilih Tidak</Text>
                       </View>
 
                       <View id="entryGoogle50kRekap" style={{ marginBottom: 15 }}>
@@ -1167,6 +1978,16 @@ class addVisit extends Component {
                           disabled />
                       </View>
 
+                      {
+                        this.state.entryGoogle50k === "Tidak" && <View id="entryLotGoogle50k" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Google50K?</Label>
+                          <Input
+                            value={this.state.entryLotGoogle50k}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
+
                       <View id="entryGoogle100kRekap" style={{ marginBottom: 15 }}>
                         <Label>Google 100k?</Label>
                         <Input
@@ -1174,6 +1995,16 @@ class addVisit extends Component {
                           style={{ backgroundColor: '#F0F0F0' }}
                           disabled />
                       </View>
+
+                      {
+                        this.state.entryGoogle100k === "Tidak" && <View id="entryLotGoogle100k" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Google100K?</Label>
+                          <Input
+                            value={this.state.entryLotGoogle100k}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
 
                       <View id="entryGoogle150kRekap" style={{ marginBottom: 15 }}>
                         <Label>Google 150k?</Label>
@@ -1183,6 +2014,16 @@ class addVisit extends Component {
                           disabled />
                       </View>
 
+                      {
+                        this.state.entryGoogle150k === "Tidak" && <View id="entryLotGoogle150k" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Google150K?</Label>
+                          <Input
+                            value={this.state.entryLotGoogle150k}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
+
                       <View id="entryGoogle300kRekap" style={{ marginBottom: 15 }}>
                         <Label>Google 300k?</Label>
                         <Input
@@ -1190,6 +2031,16 @@ class addVisit extends Component {
                           style={{ backgroundColor: '#F0F0F0' }}
                           disabled />
                       </View>
+
+                      {
+                        this.state.entryGoogle300k === "Tidak" && <View id="entryLotGoogle300k" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Google300K?</Label>
+                          <Input
+                            value={this.state.entryLotGoogle300k}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
 
                       <View id="entryGoogle500kRekap" style={{ marginBottom: 15 }}>
                         <Label>Google 500k?</Label>
@@ -1199,6 +2050,16 @@ class addVisit extends Component {
                           disabled />
                       </View>
 
+                      {
+                        this.state.entryGoogle500k === "Tidak" && <View id="entryLotGoogle500k" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Google500K?</Label>
+                          <Input
+                            value={this.state.entryLotGoogle500k}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
+
                       <View id="entrySpotify1mRekap" style={{ marginBottom: 15 }}>
                         <Label>Spotify 1m ?</Label>
                         <Input
@@ -1206,6 +2067,16 @@ class addVisit extends Component {
                           style={{ backgroundColor: '#F0F0F0' }}
                           disabled />
                       </View>
+
+                      {
+                        this.state.entrySpotify1m === "Tidak" && <View id="entryLotSpotify1m" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Spotify1m?</Label>
+                          <Input
+                            value={this.state.entryLotSpotify1m}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
 
                       <View id="entrySpotify3mRekap" style={{ marginBottom: 15 }}>
                         <Label>Spotify 3m ?</Label>
@@ -1215,8 +2086,33 @@ class addVisit extends Component {
                           disabled />
                       </View>
 
-                      <View id="fotoPop1Rekap" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                        <Text> FOTO POP 1</Text>
+                      {
+                        this.state.entrySpotify3m === "Tidak" && <View id="entryLotSpotify3m" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Spotify3m?</Label>
+                          <Input
+                            value={this.state.entryLotSpotify3m}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
+
+                      <View id="fotoPop1Rekap1" style={{ marginBottom: 15 }}>
+                        {
+                          this.state.idRetailer === 1
+                            ? <Label>Foto Promotion 1</Label>
+                            : <Label>Foto Promotion</Label>
+                        }
+                        {
+                          this.state.imgPOP1
+                            ? <Image source={{ uri: `${BaseURL}/${this.state.imgPOP1}` }} style={{
+                              width: '100%', height: 400,
+                              resizeMode: 'stretch'
+                            }} />
+                            : <Image source={require('../asset/placeholder.png')} style={{
+                              width: '100%', height: 300,
+                              resizeMode: 'stretch'
+                            }} />
+                        }
                       </View>
                       <View id="entryPop1Rekap" style={{ marginBottom: 15 }}>
                         <Label>Apakah (Grafik fixture teratas) cocok dengan gambar ini ?</Label>
@@ -1228,8 +2124,19 @@ class addVisit extends Component {
 
                       {
                         this.state.idRetailer === 1 && <>
-                          <View id="fotoPOP2Rekap" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                            <Text> FOTO POP 2</Text>
+                          <View id="fotoPOP2Rekap2" style={{ marginBottom: 15 }}>
+                            <Label>Foto Promotion 2</Label>
+                            {
+                              this.state.imgPOP2
+                                ? <Image source={{ uri: `${BaseURL}/${this.state.imgPOP2}` }} style={{
+                                  width: '100%', height: 400,
+                                  resizeMode: 'stretch'
+                                }} />
+                                : <Image source={require('../asset/placeholder.png')} style={{
+                                  width: '100%', height: 300,
+                                  resizeMode: 'stretch'
+                                }} />
+                            }
                           </View>
                           <View id="entryPop2Rekap" style={{ marginBottom: 15 }}>
                             <Label>Apakah (Grafik fixture teratas) cocok dengan gambar ini ?</Label>
@@ -1241,9 +2148,10 @@ class addVisit extends Component {
                         </>
                       }
 
-                      <View id="knowledgeRekap" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                        <Text> Knowledge</Text>
+                      <View id="knowledge" style={{ height: 50, width: '100%', backgroundColor: '#afbd20', justifyContent: 'center', paddingLeft: 10, marginBottom: 10, marginTop: 5 }}>
+                        <Text style={{ color: 'white', fontWeight: 'bold' }}>Knowledge</Text>
                       </View>
+
 
                       <View id="assistNameRekap" style={{ marginBottom: 15 }}>
                         <Label>Siapa nama asisten toko ?</Label>
@@ -1281,12 +2189,19 @@ class addVisit extends Component {
 
                     <>
 
-                      <View id="fotoRekap" style={{ marginBottom: 15 }}>
+                      <View id="fotoFixOutRekap" style={{ marginBottom: 15 }}>
                         <Label>Image Exit Fixture</Label>
-                        <Input
-                          value="BELUM"
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          disabled />
+                        {
+                          this.state.img_fixture_out
+                            ? <Image source={this.state.img_fixture_out} style={{
+                              width: '100%', height: 400,
+                              resizeMode: 'stretch'
+                            }} />
+                            : <Image source={require('../asset/placeholder-take-image.png')} style={{
+                              width: '100%', height: 300,
+                              resizeMode: 'stretch'
+                            }} />
+                        }
                       </View>
                       <View id="exitFixCompRekap" style={{ marginBottom: 15 }}>
 
@@ -1297,19 +2212,74 @@ class addVisit extends Component {
                           disabled />
                       </View>
 
-                      <View id="fotoFixTraitRekap" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                        <Text> FOTO FIXTURE TRAITS</Text>
+                      {
+                        this.state.exitFixComp === "Tidak" && <View id="rekapExitCorrectFix" style={{ marginBottom: 15 }}>
+                          <Label>Fixture yang ada dilapangan ?</Label>
+                          <Item picker>
+                            <Picker
+                              mode="dropdown"
+                              iosIcon={<Icon name="arrow-down" />}
+                              style={{ backgroundColor: '#F0F0F0' }}
+                              selectedValue={this.state.exitCorrectFix}
+                              onValueChange={(text) => this.onValueChangeNew('exitCorrectFix', text)}
+                              disabled
+                            >
+                              {
+                                this.state.dataFixtureType.map(el =>
+                                  <Picker.Item label={el.fixture_type} value={el.id} key={"fix" + el.id} />
+                                )
+                              }
+                            </Picker>
+                          </Item>
+                        </View>
+                      }
+
+                      <View id="fotoFixTraitRekap2" style={{ marginBottom: 15 }}>
+                        <Label>Foto Fixture Traits</Label>
+                        {
+                          this.state.imgFixture1
+                            ? <Image source={{ uri: `${BaseURL}/${this.state.imgFixture1}` }} style={{
+                              width: '100%', height: 400,
+                              resizeMode: 'stretch'
+                            }} />
+                            : <Image source={require('../asset/placeholder.png')} style={{
+                              width: '100%', height: 300,
+                              resizeMode: 'stretch'
+                            }} />
+                        }
                       </View>
                       <View id="exitPEGCompRekap" style={{ marginBottom: 15 }}>
-                        <Label>Apakah jumlah PEG sudah benar ?</Label>
+                        <Label>Adakah gantungan yang rusak ?</Label>
                         <Input
                           value={this.state.exitPegComp}
                           style={{ backgroundColor: '#F0F0F0' }}
                           disabled />
                       </View>
 
-                      <View id="fotoPOGRekap" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                        <Text> FOTO POG</Text>
+
+                      {
+                        this.state.exitPegComp === "Iya" && <View id="exitBrokenHanger" style={{ marginBottom: 15 }}>
+                          <Label>Berapa gantungan yang rusak ?</Label>
+                          <Input
+                            value={this.state.exitBrokenHanger}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
+
+                      <View id="fotoPOGRekap2" style={{ marginBottom: 15 }}>
+                        <Label>Foto POG</Label>
+                        {
+                          this.state.imgPOG1
+                            ? <Image source={{ uri: `${BaseURL}/${this.state.imgPOG1}` }} style={{
+                              width: '100%', height: 400,
+                              resizeMode: 'stretch'
+                            }} />
+                            : <Image source={require('../asset/placeholder.png')} style={{
+                              width: '100%', height: 300,
+                              resizeMode: 'stretch'
+                            }} />
+                        }
                       </View>
                       <View id="exitPOGCompRekap" style={{ marginBottom: 15 }}>
                         <Label>Apakah POG Terpasang dengan benar ?</Label>
@@ -1317,6 +2287,25 @@ class addVisit extends Component {
                           value={this.state.exitPogComp}
                           style={{ backgroundColor: '#F0F0F0' }}
                           disabled />
+                      </View>
+
+                      {
+                        this.state.exitPogComp === "Tidak" && <View id="exitCorrectPogRekap" style={{ marginBottom: 15 }}>
+                          <Label>Keadaan POG dilapangan ?</Label>
+                          <Input
+                            value={this.state.exitCorrectPogRekap}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
+
+                      <View id="instockCompRekap2" style={{ height: 50, width: '100%', backgroundColor: '#afbd20', justifyContent: 'center', paddingLeft: 10, marginBottom: 10, marginTop: 5 }}>
+                        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 18 }}>In-stock Compliance</Text>
+                      </View>
+
+                      <View style={{ marginBottom: 15 }}>
+                        <Text>Jika kartu lebih dari 15 maka pilih Iya,</Text>
+                        <Text>jika kartu kurang dari 15 maka pilih Tidak</Text>
                       </View>
 
                       <View id="exitGoogle50kRekap" style={{ marginBottom: 15 }}>
@@ -1327,6 +2316,16 @@ class addVisit extends Component {
                           disabled />
                       </View>
 
+                      {
+                        this.state.exitGoogle50k === "Tidak" && <View id="exitLotGoogle50k" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Google50K?</Label>
+                          <Input
+                            value={this.state.exitLotGoogle50k}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
+
                       <View id="exitGoogle100kRekap" style={{ marginBottom: 15 }}>
                         <Label>Google 100k?</Label>
                         <Input
@@ -1334,6 +2333,16 @@ class addVisit extends Component {
                           style={{ backgroundColor: '#F0F0F0' }}
                           disabled />
                       </View>
+
+                      {
+                        this.state.exitGoogle100k === "Tidak" && <View id="exitLotGoogle100k" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Google100K?</Label>
+                          <Input
+                            value={this.state.exitLotGoogle100k}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
 
                       <View id="exitGoogle150kRekap" style={{ marginBottom: 15 }}>
                         <Label>Google 150k?</Label>
@@ -1343,6 +2352,16 @@ class addVisit extends Component {
                           disabled />
                       </View>
 
+                      {
+                        this.state.exitGoogle150k === "Tidak" && <View id="exitLotGoogle150k" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Google150K?</Label>
+                          <Input
+                            value={this.state.exitLotGoogle150k}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
+
                       <View id="exitGoogle300kRekap" style={{ marginBottom: 15 }}>
                         <Label>Google 300k?</Label>
                         <Input
@@ -1350,6 +2369,16 @@ class addVisit extends Component {
                           style={{ backgroundColor: '#F0F0F0' }}
                           disabled />
                       </View>
+
+                      {
+                        this.state.exitGoogle300k === "Tidak" && <View id="exitLotGoogle300k" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Google300K?</Label>
+                          <Input
+                            value={this.state.exitLotGoogle300k}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
 
                       <View id="exitGoogle500kRekap" style={{ marginBottom: 15 }}>
                         <Label>Google 500k?</Label>
@@ -1359,6 +2388,16 @@ class addVisit extends Component {
                           disabled />
                       </View>
 
+                      {
+                        this.state.exitGoogle500k === "Tidak" && <View id="exitLotGoogle500k" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Google500K?</Label>
+                          <Input
+                            value={this.state.exitLotGoogle500k}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
+
                       <View id="exitSpotify1mRekap" style={{ marginBottom: 15 }}>
                         <Label>Spotify 1m ?</Label>
                         <Input
@@ -1366,6 +2405,16 @@ class addVisit extends Component {
                           style={{ backgroundColor: '#F0F0F0' }}
                           disabled />
                       </View>
+
+                      {
+                        this.state.exitSpotify1m === "Tidak" && <View id="exitLotSpotify1m" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Spotify1M?</Label>
+                          <Input
+                            value={this.state.exitLotSpotify1m}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
 
                       <View id="exitSpotify3mRekap" style={{ marginBottom: 15 }}>
                         <Label>Spotify 3m ?</Label>
@@ -1375,8 +2424,33 @@ class addVisit extends Component {
                           disabled />
                       </View>
 
-                      <View id="fotoPop1Rekap" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                        <Text> FOTO POP 1</Text>
+                      {
+                        this.state.exitSpotify3m === "Tidak" && <View id="exitLotSpotify3m" style={{ marginBottom: 15 }}>
+                          <Label>Sisa gantungan Spotify3M?</Label>
+                          <Input
+                            value={this.state.exitLotSpotify3m}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            disabled />
+                        </View>
+                      }
+
+                      <View id="fotoPop1Rekap" style={{ marginBottom: 15 }}>
+                        {
+                          this.state.idRetailer === 1
+                            ? <Label>Foto Promotion 1</Label>
+                            : <Label>Foto Promotion</Label>
+                        }
+                        {
+                          this.state.imgPOP1
+                            ? <Image source={{ uri: `${BaseURL}/${this.state.imgPOP1}` }} style={{
+                              width: '100%', height: 400,
+                              resizeMode: 'stretch'
+                            }} />
+                            : <Image source={require('../asset/placeholder.png')} style={{
+                              width: '100%', height: 300,
+                              resizeMode: 'stretch'
+                            }} />
+                        }
                       </View>
                       <View id="exitPop1Rekap" style={{ marginBottom: 15 }}>
                         <Label>Apakah (Grafik fixture teratas) cocok dengan gambar ini ?</Label>
@@ -1388,8 +2462,19 @@ class addVisit extends Component {
 
                       {
                         this.state.idRetailer === 1 && <>
-                          <View id="fotoPOP2Rekap" style={{ height: 100, width: '100%', backgroundColor: '' }}>
-                            <Text> FOTO POP 2</Text>
+                          <View id="fotoPOP2Rekap2" style={{ marginBottom: 15 }}>
+                            <Label>Foto Promotion 2</Label>
+                            {
+                              this.state.imgPOP2
+                                ? <Image source={{ uri: `${BaseURL}/${this.state.imgPOP2}` }} style={{
+                                  width: '100%', height: 400,
+                                  resizeMode: 'stretch'
+                                }} />
+                                : <Image source={require('../asset/placeholder.png')} style={{
+                                  width: '100%', height: 300,
+                                  resizeMode: 'stretch'
+                                }} />
+                            }
                           </View>
                           <View id="exitPop2Rekap" style={{ marginBottom: 15 }}>
                             <Label>Apakah (Grafik fixture teratas) cocok dengan gambar ini ?</Label>
@@ -1405,6 +2490,7 @@ class addVisit extends Component {
                   </Form>
                 </ScrollView>
               </ProgressStep>
+
 
             </ProgressSteps>
           </View>
@@ -1431,8 +2517,21 @@ class addVisit extends Component {
             }
           </List>
         </Popover>
+
+
+        {
+          this.state.loading &&
+          <View style={styles.loading}>
+            <View style={{
+              width: 100, height: 100, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', borderRadius: 10
+            }}>
+              <ActivityIndicator size='large' color="#0079C2" />
+            </View>
+          </View>
+        }
       </>
     )
+
   }
 }
 
@@ -1445,6 +2544,61 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     height: 30
   },
+  loading: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    opacity: 0.5,
+    backgroundColor: 'black',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  autocompleteContainer: {
+    flex: 1,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: 1
+  },
+  itemText: {
+    fontSize: 15,
+    margin: 2
+  },
+
+  autocompletesContainer: {
+    paddingTop: 0,
+    zIndex: 1,
+    width: "100%",
+    paddingHorizontal: 8,
+  },
+  input: { maxHeight: 40 },
+  inputContainer: {
+    display: "flex",
+    flexShrink: 0,
+    flexGrow: 0,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderColor: "#c7c6c1",
+    paddingVertical: 13,
+    paddingLeft: 12,
+    paddingRight: "5%",
+    width: "100%",
+    justifyContent: "flex-start",
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  plus: {
+    position: "absolute",
+    left: 15,
+    top: 10,
+  },
 })
 
 const mapStateToProps = ({ user_id }) => {
@@ -1452,4 +2606,4 @@ const mapStateToProps = ({ user_id }) => {
     user_id
   }
 }
-export default connect(mapStateToProps)(addVisit)
+export default connect(mapStateToProps)(AddVisit)

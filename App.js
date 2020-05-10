@@ -12,11 +12,14 @@ import store from './js/store'
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { Root } from "native-base";
 
 import SplashScreen from './js/screen/splashScreen';
 import LoginScreen from './js/screen/loginScreen';
 import DashboardScreen from './js/screen/dashboardScreen';
 import AddVisitScreen from './js/screen/addVisit';
+import DetailVisitScreen from './js/screen/detailVisit';
+import ListPendingVisitScreen from './js/screen/listPendingVisit';
 
 import {
   StyleSheet,
@@ -37,15 +40,20 @@ function MyStack() {
         }} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
+      <Stack.Screen name="DetailVisit" component={DetailVisitScreen} />
+      <Stack.Screen name="ListPendingVisit" component={ListPendingVisitScreen} />
       <Stack.Screen name="AddVisit" component={AddVisitScreen} />
     </Stack.Navigator>
   );
 }
+
 const App: () => React$Node = () => {
   return <Provider store={store}>
-    <NavigationContainer>
-      <MyStack />
-    </NavigationContainer>
+    <Root>
+      <NavigationContainer>
+        <MyStack />
+      </NavigationContainer>
+    </Root>
   </Provider>
 };
 

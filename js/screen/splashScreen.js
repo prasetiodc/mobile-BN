@@ -12,8 +12,8 @@ class splashScreen extends Component {
     super(props);
   }
 
-  componentDidMount() {
-    setTimeout(async () => {
+  async componentDidMount() {
+    // setTimeout(async () => {
       let token = await AsyncStorage.getItem('token_bhn_md')
       if (token) {
 
@@ -29,12 +29,13 @@ class splashScreen extends Component {
             this.props.navigation.navigate("Dashboard")
           })
           .catch(err => {
-            this.props.navigation.navigate("Login")
+            // this.props.navigation.navigate("Login")
+            this.props.navigation.navigate("Dashboard")
           })
       } else {
         this.props.navigation.navigate("Login")
       }
-    }, 1000)
+    // }, 1000)
   }
 
   render() {
