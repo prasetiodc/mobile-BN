@@ -1,4 +1,6 @@
 import React, { Component } from 'react';
+import NetInfo from "@react-native-community/netinfo";
+
 import { StyleSheet, TouchableHighlight, Image, View, Dimensions, ScrollView, ActivityIndicator, BackHandler } from 'react-native';
 import { Item, Input, Text, Button, Toast } from 'native-base';
 import { API } from '../../config/API';
