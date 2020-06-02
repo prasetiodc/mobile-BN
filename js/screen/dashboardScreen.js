@@ -97,7 +97,6 @@ class DashboardScreen extends Component {
         dataForDisplay: allVisit.data.data,
       })
     } catch (err) {
-      console.log(err)
       Toast.show({
         text: "Fetch data visit failed",
         buttonText: "Okay",

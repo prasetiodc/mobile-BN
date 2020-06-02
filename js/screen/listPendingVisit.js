@@ -93,7 +93,6 @@ class ListPendingVisitScreen extends Component {
   sendPendingVisit = async () => {
     NetInfo.fetch().then(async state => {
       if (state.isConnected) {
-        console.log("MASUK SEND PENDING")
         let token = await AsyncStorage.getItem('token_bhn_md'), listFailed = []
 
         this.setState({ loading: true })
@@ -109,41 +108,10 @@ class ListPendingVisitScreen extends Component {
           })
 
           promises.push(API.post('/visit', formData, { headers: { token } }))
-          // .then(({ data }) => {
-          //   console.log("MASUK 5", storeCode, { data })
-
-          //   Toast.show({
-          //     text: `Add pending data visit code store ${storeCode} success`,
-          //     buttonText: "Okay",
-          //     duration: 3000,
-          //     type: "success"
-          //   })
-          // })
-          // .catch(err => {
-          //   if (err.message === "Request failed with status code 504") {
-          //     Toast.show({
-          //       text: `Add pending data visit code store ${storeCode} success`,
-          //       buttonText: "Okay",
-          //       duration: 3000,
-          //       type: "success"
-          //     })
-          //   } else {
-          //     Toast.show({
-          //       text: `Add pending data visit code store ${storeCode} error`,
-          //       buttonText: "Okay",
-          //       duration: 3000,
-          //       type: "danger"
-          //     })
-          //   }
-          //   console.log(err)
-
-          //   listFailed.push(element)
-          // })
         })
 
         Promise.all(promises)
           .then(async response => {
-            console.log(response)
 
             let listStoreCode = []
             await response.forEach(({ data }) => {
@@ -157,7 +125,6 @@ class ListPendingVisitScreen extends Component {
               type: "success"
             })
 
-            console.log("FINISH SEND PENDING")
             this.setState({ loading: false })
 
             if (listFailed.length > 0) await AsyncStorage.setItem('visit_pending', JSON.stringify(listFailed))
@@ -165,12 +132,9 @@ class ListPendingVisitScreen extends Component {
               await AsyncStorage.removeItem('visit_pending')
               this.setState({ sendPendingVisit: false })
             }
-            console.log("FETCH DATA")
             await this.fetchData()
           })
           .catch(err => {
-            console.log(err)
-
             Toast.show({
               text: `Please try again`,
               buttonText: "Okay",

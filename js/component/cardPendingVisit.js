@@ -26,7 +26,6 @@ export default class cardPendingVisit extends Component {
       [
         {
           text: "Cancel",
-          // onPress: () => console.log("Cancel Pressed"),
           style: "cancel"
         },
         {

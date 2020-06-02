@@ -5,10 +5,10 @@ import NetInfo from "@react-native-community/netinfo";
 
 import { Text, View, StyleSheet, ScrollView, TouchableHighlight, Dimensions, Image, ActivityIndicator } from 'react-native';
 import { Icon, Badge, Input, Item, Form, List, ListItem, Picker, Label, Button, Toast } from 'native-base';
+
 import Popover from 'react-native-popover-view'
 import { ProgressSteps, ProgressStep } from 'react-native-progress-steps';
 import ImagePicker from 'react-native-image-picker';
-
 
 import { API, BaseURL } from '../../config/API';
 
@@ -24,7 +24,8 @@ const progressStepsStyle = {
 
 const buttonTextStyle = {
   color: '#0079C2',
-  fontWeight: 'bold'
+  fontWeight: 'bold',
+  marginBottom: 0
 };
 
 class AddVisit extends Component {
@@ -37,6 +38,7 @@ class AddVisit extends Component {
       dataAllRetailer: [],
       dataAllStore: [],
       dataAllDC: [],
+      dataAllStoreRetailer: [],
       dataAllStoreForDisplay: [],
       dataFixtureType: [],
       idRetailer: '',
@@ -55,54 +57,54 @@ class AddVisit extends Component {
       img_fixture_in: null,
       img_fixture_out: null,
       idStore: '',
-      entryFixComp: 'Iya',
-      entryCorrectFix: '1',
-      entryPegComp: 'Tidak',
-      entryBrokenHanger: '0',
-      entryPogComp: 'Iya',
-      entryCorrectPog: 'Messy',
-      entryGoogle50k: 'Iya',
+      entryFixComp: '',
+      entryCorrectFix: '',
+      entryPegComp: '',
+      entryBrokenHanger: '',
+      entryPogComp: '',
+      entryCorrectPog: '',
+      entryGoogle50k: '',
       entryLotGoogle50k: '',
-      entryGoogle100k: 'Iya',
+      entryGoogle100k: '',
       entryLotGoogle100k: '',
-      entryGoogle150k: 'Iya',
+      entryGoogle150k: '',
       entryLotGoogle150k: '',
-      entryGoogle300k: 'Iya',
+      entryGoogle300k: '',
       entryLotGoogle300k: '',
-      entryGoogle500k: 'Iya',
+      entryGoogle500k: '',
       entryLotGoogle500k: '',
-      entrySpotify1m: 'Iya',
+      entrySpotify1m: '',
       entryLotSpotify1m: '',
-      entrySpotify3m: 'Iya',
+      entrySpotify3m: '',
       entryLotSpotify3m: '',
-      entryPop1: 'Iya',
-      entryPop2: 'Iya',
+      entryPop1: '',
+      entryPop2: '',
       assistName: '',
-      giftCard: 'Iya',
-      aktifPOR: 'Iya',
-      changeCardGift: 'Iya',
-      exitFixComp: 'Iya',
-      exitCorrectFix: '1',
-      exitPegComp: 'Tidak',
-      exitBrokenHanger: '0',
-      exitPogComp: 'Iya',
-      exitCorrectPog: 'Messy',
-      exitGoogle50k: 'Iya',
+      giftCard: '',
+      aktifPOR: '',
+      changeCardGift: '',
+      exitFixComp: '',
+      exitCorrectFix: '',
+      exitPegComp: '',
+      exitBrokenHanger: '',
+      exitPogComp: '',
+      exitCorrectPog: '',
+      exitGoogle50k: '',
       exitLotGoogle50k: '',
-      exitGoogle100k: 'Iya',
+      exitGoogle100k: '',
       exitLotGoogle100k: '',
-      exitGoogle150k: 'Iya',
+      exitGoogle150k: '',
       exitLotGoogle150k: '',
-      exitGoogle300k: 'Iya',
+      exitGoogle300k: '',
       exitLotGoogle300k: '',
-      exitGoogle500k: 'Iya',
+      exitGoogle500k: '',
       exitLotGoogle500k: '',
-      exitSpotify1m: 'Iya',
+      exitSpotify1m: '',
       exitLotSpotify1m: '',
-      exitSpotify3m: 'Iya',
+      exitSpotify3m: '',
       exitLotSpotify3m: '',
-      exitPop1: 'Iya',
-      exitPop2: 'Iya',
+      exitPop1: '',
+      exitPop2: '',
 
       imgPOG1: '',
       imgPOG2: '',
@@ -112,7 +114,10 @@ class AddVisit extends Component {
       imgPOP2: '',
 
       showSuggestion: false,
-      hasSelectedStore: false
+      hasSelectedStore: false,
+      number: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+      number2: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+
     };
   }
 
@@ -137,18 +142,19 @@ class AddVisit extends Component {
 
       initialRetailer && this.setState({
         initialRetailer: initialRetailer.initial,
+        dataAllStoreRetailer: newListStore,
         dataAllStoreForDisplay: newListStore.slice(0, 4),
         imgPOP1: initialRetailer.promotion_1,
-        imgPOP2: initialRetailer.promotion_2,
-        // idStore: newListStore[0].store_code
+        imgPOP2: initialRetailer.promotion_2
       })
 
     }
 
     if (this.state.idStore !== prevState.idStore) {
 
-      let hasilSearch = await this.state.dataAllStoreForDisplay.filter(el => el.store_code.toLowerCase().match(new RegExp(this.state.idStore.toLowerCase())))
-      this.setState({ dataAllStoreForDisplay: hasilSearch, showSuggestion: true })
+      let hasilSearch = await this.state.dataAllStoreRetailer.filter(el => el.store_code.toLowerCase().match(new RegExp(this.state.idStore.toLowerCase())))
+
+      this.setState({ dataAllStoreForDisplay: hasilSearch.slice(0, 4), showSuggestion: true })
 
       if (this.state.nameStore) {
         this.setState({
@@ -232,7 +238,6 @@ class AddVisit extends Component {
         hasChangeAddress: true
       })
     }
-
   }
 
   fetchData = async () => {
@@ -246,19 +251,16 @@ class AddVisit extends Component {
       let allDc = await API.get('/dc', { headers: { token } })
       let allFixtureType = await API.get('/fixture-type', { headers: { token } })
 
-      // allStore = await allStore.data.data.filter(el => Number(el.md_id) === this.props.user_id)
-
       let newListRetailer = []
-      // if (allStore.data.data.length > 0) {
       await allRetailer.data.data.forEach(async element => {
         let isAvailable = await allStore.data.data.find(el => el.retailer_id === element.id)
         if (isAvailable) newListRetailer.push(element)
       });
-      // }
 
 
       this.setState({
         loading: false,
+        idRetailer: newListRetailer.length > 0 ? newListRetailer[0].id : '',
         dataAllRetailer: newListRetailer,
         dataAllStore: allStore.data.data,
         dataAllStoreForDisplay: allStore.data.data,
@@ -317,14 +319,7 @@ class AddVisit extends Component {
   }
 
   logout = async () => {
-
     await AsyncStorage.clear()
-
-    // const resetAction = StackActions.reset({
-    //   index: 0,
-    //   actions: [NavigationActions.navigate({ routeName: 'Login' })],
-    // });
-    // this.props.navigation.dispatch(resetAction);
     this.props.navigation.navigate("Login")
   }
 
@@ -342,9 +337,6 @@ class AddVisit extends Component {
 
   submit = () => {
     NetInfo.fetch().then(state => {
-      // console.log("Connection type", state.type);
-      // console.log("Is connected?", state.isConnected);
-
       if (state.isConnected) {
         this.sendVisit()
       } else {
@@ -425,7 +417,6 @@ class AddVisit extends Component {
         uri: this.state.img_fixture_out.uri
       })
 
-      // await API.post('/visit', formData, { headers: { token, "Content-Type": "multipart/form-data" }, timeout: 60000 })
       await API.post('/visit', formData, { headers: { token } })
 
       Toast.show({
@@ -443,29 +434,11 @@ class AddVisit extends Component {
       this.props.route.params.refresh()
       this.props.navigation.navigate('Dashboard')
     } catch (err) {
-      console.log(err)
       this.setState({
         loading: false
       })
 
-      if (err.message === "Request failed with status code 504") {
-        this.resetForm()
-        this.setState({
-          loading: false
-        })
-
-        Toast.show({
-          text: "Add data visit success",
-          buttonText: "Okay",
-          duration: 3000,
-          type: "success"
-        })
-
-        this.props.route.params.refresh()
-        this.props.navigation.navigate('Dashboard')
-      } else {
-        await this.pendingVisit()
-      }
+      await this.pendingVisit()
     }
   }
 
@@ -571,9 +544,6 @@ class AddVisit extends Component {
       if (response.uri) {
         this.setState({
           [args]: response
-          // filePath: response,
-          // fileData: response.data,
-          // fileUri: response.uri
         });
 
       }
@@ -596,52 +566,54 @@ class AddVisit extends Component {
       address: '',
 
       idStore: '',
-      entryFixComp: 'Iya',
+      entryFixComp: '',
       entryCorrectFix: '',
-      entryPegComp: 'Tidak',
-      entryBrokenHanger: '0',
-      entryPogComp: 'Iya',
-      entryGoogle50k: 'Iya',
+      entryPegComp: '',
+      entryBrokenHanger: '',
+      entryPogComp: '',
+      entryCorrectPog: '',
+      entryGoogle50k: '',
       entryLotGoogle50k: '',
-      entryGoogle100k: 'Iya',
+      entryGoogle100k: '',
       entryLotGoogle100k: '',
-      entryGoogle150k: 'Iya',
+      entryGoogle150k: '',
       entryLotGoogle150k: '',
-      entryGoogle300k: 'Iya',
+      entryGoogle300k: '',
       entryLotGoogle300k: '',
-      entryGoogle500k: 'Iya',
+      entryGoogle500k: '',
       entryLotGoogle500k: '',
-      entrySpotify1m: 'Iya',
+      entrySpotify1m: '',
       entryLotSpotify1m: '',
-      entrySpotify3m: 'Iya',
+      entrySpotify3m: '',
       entryLotSpotify3m: '',
-      entryPop1: 'Iya',
-      entryPop2: 'Iya',
+      entryPop1: '',
+      entryPop2: '',
       assistName: '',
-      giftCard: 'Iya',
-      aktifPOR: 'Iya',
-      changeCardGift: 'Iya',
-      exitFixComp: 'Iya',
+      giftCard: '',
+      aktifPOR: '',
+      changeCardGift: '',
+      exitFixComp: '',
       exitCorrectFix: '',
-      exitPegComp: 'Tidak',
-      exitBrokenHanger: '0',
-      exitPogComp: 'Iya',
-      exitGoogle50k: 'Iya',
+      exitPegComp: '',
+      exitBrokenHanger: '',
+      exitPogComp: '',
+      exitCorrectPog: '',
+      exitGoogle50k: '',
       exitLotGoogle50k: '',
-      exitGoogle100k: 'Iya',
+      exitGoogle100k: '',
       exitLotGoogle100k: '',
-      exitGoogle150k: 'Iya',
+      exitGoogle150k: '',
       exitLotGoogle150k: '',
-      exitGoogle300k: 'Iya',
+      exitGoogle300k: '',
       exitLotGoogle300k: '',
-      exitGoogle500k: 'Iya',
+      exitGoogle500k: '',
       exitLotGoogle500k: '',
-      exitSpotify1m: 'Iya',
+      exitSpotify1m: '',
       exitLotSpotify1m: '',
-      exitSpotify3m: 'Iya',
+      exitSpotify3m: '',
       exitLotSpotify3m: '',
-      exitPop1: 'Iya',
-      exitPop2: 'Iya',
+      exitPop1: '',
+      exitPop2: '',
 
       imgPOG1: '',
       imgPOG2: '',
@@ -660,7 +632,7 @@ class AddVisit extends Component {
   render() {
     return (
       <>
-        <View style={{ height: '100%', backgroundColor: '#0079C2', padding: 15, display: 'flex' }}>
+        <View style={{ height: '100%', backgroundColor: '#0079C2', padding: 15, paddingBottom: 5, display: 'flex' }}>
           <View style={styles.header}>
             <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }} >
               <Text style={{ fontSize: 25, color: 'white', fontWeight: 'bold', marginRight: 10 }}>BHN MD</Text>
@@ -698,12 +670,12 @@ class AddVisit extends Component {
           </View>
 
 
-          <View style={{ backgroundColor: 'white', height: '100%', marginTop: 20, padding: 0 }}>
-            <ProgressSteps {...progressStepsStyle}>
+          <View style={{ backgroundColor: 'white', marginTop: 20 }}>
+            <ScrollView style={{ height: '100%' }}>
+              <ProgressSteps {...progressStepsStyle}>
 
-              {/* 1 */}
-              <ProgressStep label="" nextBtnTextStyle={buttonTextStyle} previousBtnStyle={{ display: 'none' }}  >
-                <ScrollView>
+                {/* 1 */}
+                <ProgressStep label="" nextBtnTextStyle={buttonTextStyle} previousBtnStyle={{ display: 'none' }} nextBtnDisabled={!this.state.nameStore || !this.state.img_store}>
                   <Form style={{ padding: 20, paddingTop: 0 }}>
                     <View id="idRetailer" style={{ marginBottom: 15 }}>
                       <Label>Retailer</Label>
@@ -714,9 +686,8 @@ class AddVisit extends Component {
                           style={{ backgroundColor: '#F0F0F0' }}
                           selectedValue={this.state.idRetailer}
                           onValueChange={(text) => this.onValueChangeNew('idRetailer', text)}
-
-                        // onValueChange={this.onValueChangeRetailer.bind(this)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           {
                             this.state.dataAllRetailer.length > 0 && this.state.dataAllRetailer.map(el =>
                               <Picker.Item label={el.initial} value={el.id} key={`${el.id}${el.initial}`} />
@@ -729,7 +700,7 @@ class AddVisit extends Component {
                       <Label>Store</Label>
                       <Input
                         value={this.state.idStore}
-                        style={{ backgroundColor: '#F0F0F0' }}
+                        style={{ backgroundColor: '#F0F0F0', width: '100%' }}
                         onChangeText={(text) => this.setState({
                           idStore: text
                         })}
@@ -748,8 +719,8 @@ class AddVisit extends Component {
                           }
                         </List>
                       }
-
                     </View>
+
                     <View id="nameStore" style={{ marginBottom: 15 }}>
                       <Label>Store Name</Label>
                       <Input
@@ -773,6 +744,7 @@ class AddVisit extends Component {
                               selectedValue={this.state.idDC}
                               onValueChange={(text) => this.onValueChangeNew('idDC', text)}
                             >
+                              <Picker.Item label="Pilih opsi anda" value="" />
                               {
                                 this.state.dataAllDC.length > 0 && this.state.dataAllDC.map(el =>
                                   <Picker.Item label={el.DC_name} value={el.id} key={el.id} />
@@ -781,7 +753,7 @@ class AddVisit extends Component {
                             </Picker>
                           </Item>
                           : <Input
-                            value={this.state.idStore}
+                            value={this.state.idDC}
                             style={{ backgroundColor: '#F0F0F0' }}
                             disabled
                           />
@@ -809,6 +781,7 @@ class AddVisit extends Component {
                         disabled={!this.state.hasSelectedStore}
                       />
                     </View>
+
                     <View id="foto">
                       <Label>Image Store</Label>
                       {
@@ -827,13 +800,11 @@ class AddVisit extends Component {
                       </Button>
                     </View>
                   </Form>
-                </ScrollView>
-              </ProgressStep>
+                </ProgressStep>
 
 
-              {/* 2 */}
-              <ProgressStep label="" nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle}>
-                <ScrollView>
+                {/* 2 */}
+                <ProgressStep label="" nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle} nextBtnDisabled={!this.state.img_fixture_in || !this.state.entryFixComp || (this.state.entryFixComp === 'Tidak' && !this.state.entryCorrectFix) || !this.state.entryPegComp || (this.state.entryPegComp === 'Iya' && !this.state.entryBrokenHanger) || !this.state.entryPogComp || (this.state.entryPogComp === 'Tidak' && !this.state.entryCorrectPog) || !this.state.entryGoogle50k || (this.state.entryGoogle50k === 'Tidak' && !this.state.entryLotGoogle50k) || !this.state.entryGoogle100k || (this.state.entryGoogle100k === 'Tidak' && !this.state.entryLotGoogle100k) || !this.state.entryGoogle150k || (this.state.entryGoogle150k === 'Tidak' && !this.state.entryLotGoogle150k) || !this.state.entryGoogle300k || (this.state.entryGoogle300k === 'Tidak' && !this.state.entryLotGoogle300k) || !this.state.entryGoogle500k || (this.state.entryGoogle500k === 'Tidak' && !this.state.entryLotGoogle500k) || !this.state.entrySpotify1m || (this.state.entrySpotify1m === 'Tidak' && !this.state.entryLotSpotify1m) || !this.state.entrySpotify3m || (this.state.entrySpotify3m === 'Tidak' && !this.state.entryLotSpotify3m) || !this.state.entryPop1 || (this.state.idRetailer === 1 && !this.state.entryPop2) || !this.state.assistName || !this.state.giftCard || !this.state.aktifPOR || !this.state.changeCardGift}>
                   <Form style={{ padding: 20, paddingTop: 0 }}>
                     <View id="fotoEntFix" style={{ marginBottom: 15 }}>
                       <Label>Image Entry Fixture</Label>
@@ -863,6 +834,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.entryFixComp}
                           onValueChange={(text) => this.onValueChangeNew('entryFixComp', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -880,6 +852,7 @@ class AddVisit extends Component {
                             selectedValue={this.state.entryCorrectFix}
                             onValueChange={(text) => this.onValueChangeNew('entryCorrectFix', text)}
                           >
+                            <Picker.Item label="Pilih opsi anda" value="" />
                             {
                               this.state.dataFixtureType.map(el =>
                                 <Picker.Item label={el.fixture_type} value={el.id} key={"fix" + el.id} />
@@ -914,6 +887,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.entryPegComp}
                           onValueChange={(text) => this.onValueChangeNew('entryPegComp', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -923,12 +897,22 @@ class AddVisit extends Component {
                     {
                       this.state.entryPegComp === "Iya" && <View id="entryBrokenHanger" style={{ marginBottom: 15 }}>
                         <Label>Berapa gantungan yang rusak ?</Label>
-                        <Input
-                          value={this.state.entryBrokenHanger}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            entryBrokenHanger: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.entryBrokenHanger}
+                            onValueChange={(text) => this.onValueChangeNew('entryBrokenHanger', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number2.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`a${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -956,6 +940,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.entryPogComp}
                           onValueChange={(text) => this.onValueChangeNew('entryPogComp', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -973,6 +958,7 @@ class AddVisit extends Component {
                             selectedValue={this.state.entryCorrectPog}
                             onValueChange={(text) => this.onValueChangeNew('entryCorrectPog', text)}
                           >
+                            <Picker.Item label="Pilih opsi anda" value="" />
                             <Picker.Item label="Messy" value="Messy" />
                             <Picker.Item label="Missing Pegs" value="Missing Pegs" />
                             <Picker.Item label="Other Product" value="Other Product" />
@@ -1000,6 +986,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.entryGoogle50k}
                           onValueChange={(text) => this.onValueChangeNew('entryGoogle50k', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1009,12 +996,22 @@ class AddVisit extends Component {
                     {
                       this.state.entryGoogle50k === "Tidak" && <View id="entryLotGoogle50k" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Google50K?</Label>
-                        <Input
-                          value={this.state.entryLotGoogle50k}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            entryLotGoogle50k: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.entryLotGoogle50k}
+                            onValueChange={(text) => this.onValueChangeNew('entryLotGoogle50k', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`b${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1028,6 +1025,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.entryGoogle100k}
                           onValueChange={(text) => this.onValueChangeNew('entryGoogle100k', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1037,12 +1035,22 @@ class AddVisit extends Component {
                     {
                       this.state.entryGoogle100k === "Tidak" && <View id="entryLotGoogle100k" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Google100K?</Label>
-                        <Input
-                          value={this.state.entryLotGoogle100k}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            entryLotGoogle100k: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.entryLotGoogle100k}
+                            onValueChange={(text) => this.onValueChangeNew('entryLotGoogle100k', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`c${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1056,6 +1064,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.entryGoogle150k}
                           onValueChange={(text) => this.onValueChangeNew('entryGoogle150k', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1065,12 +1074,22 @@ class AddVisit extends Component {
                     {
                       this.state.entryGoogle150k === "Tidak" && <View id="entryLotGoogle150k" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Google150K?</Label>
-                        <Input
-                          value={this.state.entryLotGoogle150k}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            entryLotGoogle150k: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.entryLotGoogle150k}
+                            onValueChange={(text) => this.onValueChangeNew('entryLotGoogle150k', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`d${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1084,6 +1103,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.entryGoogle300k}
                           onValueChange={(text) => this.onValueChangeNew('entryGoogle300k', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1093,12 +1113,22 @@ class AddVisit extends Component {
                     {
                       this.state.entryGoogle300k === "Tidak" && <View id="entryLotGoogle300k" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Google300K?</Label>
-                        <Input
-                          value={this.state.entryLotGoogle300k}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            entryLotGoogle300k: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.entryLotGoogle300k}
+                            onValueChange={(text) => this.onValueChangeNew('entryLotGoogle300k', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`e${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1112,6 +1142,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.entryGoogle500k}
                           onValueChange={(text) => this.onValueChangeNew('entryGoogle500k', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1121,12 +1152,22 @@ class AddVisit extends Component {
                     {
                       this.state.entryGoogle500k === "Tidak" && <View id="entryLotGoogle500k" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Google500K?</Label>
-                        <Input
-                          value={this.state.entryLotGoogle500k}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            entryLotGoogle500k: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.entryLotGoogle500k}
+                            onValueChange={(text) => this.onValueChangeNew('entryLotGoogle500k', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`f${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1140,6 +1181,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.entrySpotify1m}
                           onValueChange={(text) => this.onValueChangeNew('entrySpotify1m', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1149,12 +1191,22 @@ class AddVisit extends Component {
                     {
                       this.state.entrySpotify1m === "Tidak" && <View id="entryLotSpotify1m" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Spotify1M?</Label>
-                        <Input
-                          value={this.state.entryLotSpotify1m}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            entryLotSpotify1m: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.entryLotSpotify1m}
+                            onValueChange={(text) => this.onValueChangeNew('entryLotSpotify1m', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`g${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1168,6 +1220,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.entrySpotify3m}
                           onValueChange={(text) => this.onValueChangeNew('entrySpotify3m', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1177,12 +1230,22 @@ class AddVisit extends Component {
                     {
                       this.state.entrySpotify3m === "Tidak" && <View id="entryLotSpotify3m" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Spotify3M?</Label>
-                        <Input
-                          value={this.state.entryLotSpotify3m}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            entryLotSpotify3m: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.entryLotSpotify3m}
+                            onValueChange={(text) => this.onValueChangeNew('entryLotSpotify3m', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`h${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1214,6 +1277,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.entryPop1}
                           onValueChange={(text) => this.onValueChangeNew('entryPop1', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1246,6 +1310,7 @@ class AddVisit extends Component {
                               selectedValue={this.state.entryPop2}
                               onValueChange={(text) => this.onValueChangeNew('entryPop2', text)}
                             >
+                              <Picker.Item label="Pilih opsi anda" value="" />
                               <Picker.Item label="Iya" value="Iya" />
                               <Picker.Item label="Tidak" value="Tidak" />
                             </Picker>
@@ -1279,6 +1344,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.giftCard}
                           onValueChange={(text) => this.onValueChangeNew('giftCard', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1295,6 +1361,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.aktifPOR}
                           onValueChange={(text) => this.onValueChangeNew('aktifPOR', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1311,39 +1378,46 @@ class AddVisit extends Component {
                           selectedValue={this.state.changeCardGift}
                           onValueChange={(text) => this.onValueChangeNew('changeCardGift', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
                       </Item>
                     </View>
                   </Form>
-                </ScrollView>
-              </ProgressStep>
+                </ProgressStep>
 
 
-              {/* 3 */}
-              <ProgressStep label="" nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle}>
-                <View style={{ padding: 20, paddingTop: 10 }}>
+                {/* 3 */}
+                <ProgressStep label="" nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle} style={{ height: '100%' }}>
+                  <View style={{ padding: 20, paddingTop: 10, height: height - 250 }}>
 
-                  <View style={{ flexDirection: 'row' }}>
-                    <Text style={{ width: 25, fontSize: 18 }}>1.</Text>
-                    <Text style={{ fontSize: 18 }}>Periksa keadaan gantungan</Text>
+                    <View style={{ flexDirection: 'row' }}>
+                      <Text style={{ width: 25, fontSize: 18 }}>1.</Text>
+                      <Text style={{ fontSize: 18 }}>Install fixture yang benar jika perlu dan memungkinkan</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row' }}>
+                      <Text style={{ width: 25, fontSize: 18 }}>2.</Text>
+                      <Text style={{ fontSize: 18 }}>Memperbaiki atau ganti gantungan yang rusak jika perlu dan memungkinkan</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row' }}>
+                      <Text style={{ width: 25, fontSize: 18 }}>3.</Text>
+                      <Text style={{ fontSize: 18 }}>Memperbaiki display atau tampilan untuk memperbaiki planogram</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row' }}>
+                      <Text style={{ width: 25, fontSize: 18 }}>4.</Text>
+                      <Text style={{ fontSize: 18 }}>Memperbaiki gambar promosi jika perlu dan memungkinkan</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row' }}>
+                      <Text style={{ width: 25, fontSize: 18 }}>5.</Text>
+                      <Text style={{ fontSize: 18 }}>Tambahkan stok jika diberikan oleh staf toko</Text>
+                    </View>
                   </View>
-                  <View style={{ flexDirection: 'row' }}>
-                    <Text style={{ width: 25, fontSize: 18 }}>2.</Text>
-                    <Text style={{ fontSize: 18 }}>Perhatikan apakah fixture di tempatkan pada posisi yang benar</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row' }}>
-                    <Text style={{ width: 25, fontSize: 18 }}>3.</Text>
-                    <Text style={{ fontSize: 18 }}>Tanyakan kepada asisten toko frequensi pembelian voucher</Text>
-                  </View>
-                </View>
-              </ProgressStep>
+                </ProgressStep>
 
 
-              {/* 4 */}
-              <ProgressStep label="" nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle}>
-                <ScrollView>
+                {/* 4 */}
+                <ProgressStep label="" nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle} nextBtnDisabled={!this.state.img_fixture_out || !this.state.exitFixComp || (this.state.exitFixComp === 'Tidak' && !this.state.exitCorrectFix) || !this.state.exitPegComp || (this.state.exitPegComp === 'Iya' && !this.state.exitBrokenHanger) || !this.state.exitPogComp || (this.state.exitPogComp === 'Tidak' && !this.state.exitCorrectPog) || !this.state.exitGoogle50k || (this.state.exitGoogle50k === 'Tidak' && !this.state.exitLotGoogle50k) || !this.state.exitGoogle100k || (this.state.exitGoogle100k === 'Tidak' && !this.state.exitLotGoogle100k) || !this.state.exitGoogle150k || (this.state.exitGoogle150k === 'Tidak' && !this.state.exitLotGoogle150k) || !this.state.exitGoogle300k || (this.state.exitGoogle300k === 'Tidak' && !this.state.exitLotGoogle300k) || !this.state.exitGoogle500k || (this.state.exitGoogle500k === 'Tidak' && !this.state.exitLotGoogle500k) || !this.state.exitSpotify1m || (this.state.exitSpotify1m === 'Tidak' && !this.state.exitLotSpotify1m) || !this.state.exitSpotify3m || (this.state.exitSpotify3m === 'Tidak' && !this.state.exitLotSpotify3m) || !this.state.exitPop1 || (this.state.idRetailer === 1 && !this.state.exitPop2)}>
                   <Form style={{ padding: 20, paddingTop: 0 }}>
                     <View id="fotoExFix" style={{ marginBottom: 15 }}>
                       <Label>Image Exit Fixture</Label>
@@ -1357,7 +1431,6 @@ class AddVisit extends Component {
                             width: '100%', height: 300,
                             resizeMode: 'stretch'
                           }} />
-                        // :<Text>KOSONG</Text>
                       }
                       <Button info onPress={() => this.launchCamera('img_fixture_out')} style={{ justifyContent: 'center', backgroundColor: '#0079C2' }}>
                         <Text style={{ color: 'white' }}>Take Photo</Text>
@@ -1373,6 +1446,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.exitFixComp}
                           onValueChange={(text) => this.onValueChangeNew('exitFixComp', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1390,6 +1464,7 @@ class AddVisit extends Component {
                             selectedValue={this.state.exitCorrectFix}
                             onValueChange={(text) => this.onValueChangeNew('exitCorrectFix', text)}
                           >
+                            <Picker.Item label="Pilih opsi anda" value="" />
                             {
                               this.state.dataFixtureType.map(el =>
                                 <Picker.Item label={el.fixture_type} value={el.id} key={"fix" + el.id} />
@@ -1424,6 +1499,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.exitPegComp}
                           onValueChange={(text) => this.onValueChangeNew('exitPegComp', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1433,12 +1509,22 @@ class AddVisit extends Component {
                     {
                       this.state.exitPegComp === "Iya" && <View id="exitBrokenHanger" style={{ marginBottom: 15 }}>
                         <Label>Berapa gantungan yang rusak ?</Label>
-                        <Input
-                          value={this.state.exitBrokenHanger}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            exitBrokenHanger: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.exitBrokenHanger}
+                            onValueChange={(text) => this.onValueChangeNew('exitBrokenHanger', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number2.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`i${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1466,6 +1552,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.exitPogComp}
                           onValueChange={(text) => this.onValueChangeNew('exitPogComp', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1483,6 +1570,7 @@ class AddVisit extends Component {
                             selectedValue={this.state.exitCorrectPog}
                             onValueChange={(text) => this.onValueChangeNew('exitCorrectPog', text)}
                           >
+                            <Picker.Item label="Pilih opsi anda" value="" />
                             <Picker.Item label="Messy" value="Messy" />
                             <Picker.Item label="Missing Pegs" value="Missing Pegs" />
                             <Picker.Item label="Other Product" value="Other Product" />
@@ -1510,6 +1598,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.exitGoogle50k}
                           onValueChange={(text) => this.onValueChangeNew('exitGoogle50k', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1519,12 +1608,22 @@ class AddVisit extends Component {
                     {
                       this.state.exitGoogle50k === "Tidak" && <View id="exitLotGoogle50k" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Google50K?</Label>
-                        <Input
-                          value={this.state.exitLotGoogle50k}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            exitLotGoogle50k: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.exitLotGoogle50k}
+                            onValueChange={(text) => this.onValueChangeNew('exitLotGoogle50k', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`j${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1538,6 +1637,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.exitGoogle100k}
                           onValueChange={(text) => this.onValueChangeNew('exitGoogle100k', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1547,12 +1647,22 @@ class AddVisit extends Component {
                     {
                       this.state.exitGoogle100k === "Tidak" && <View id="exitLotGoogle100k" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Google100K?</Label>
-                        <Input
-                          value={this.state.exitLotGoogle100k}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            exitLotGoogle100k: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.exitLotGoogle100k}
+                            onValueChange={(text) => this.onValueChangeNew('exitLotGoogle100k', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`k${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1566,6 +1676,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.exitGoogle150k}
                           onValueChange={(text) => this.onValueChangeNew('exitGoogle150k', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1575,12 +1686,22 @@ class AddVisit extends Component {
                     {
                       this.state.exitGoogle150k === "Tidak" && <View id="exitLotGoogle150k" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Google150K?</Label>
-                        <Input
-                          value={this.state.exitLotGoogle150k}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            exitLotGoogle150k: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.exitLotGoogle150k}
+                            onValueChange={(text) => this.onValueChangeNew('exitLotGoogle150k', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`l${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1594,6 +1715,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.exitGoogle300k}
                           onValueChange={(text) => this.onValueChangeNew('exitGoogle300k', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1603,12 +1725,22 @@ class AddVisit extends Component {
                     {
                       this.state.exitGoogle300k === "Tidak" && <View id="exitLotGoogle300k" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Google300K?</Label>
-                        <Input
-                          value={this.state.exitLotGoogle300k}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            exitLotGoogle300k: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.exitLotGoogle300k}
+                            onValueChange={(text) => this.onValueChangeNew('exitLotGoogle300k', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`m${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1622,6 +1754,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.exitGoogle500k}
                           onValueChange={(text) => this.onValueChangeNew('exitGoogle500k', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1631,12 +1764,22 @@ class AddVisit extends Component {
                     {
                       this.state.exitGoogle500k === "Tidak" && <View id="exitLotGoogle500k" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Google500K?</Label>
-                        <Input
-                          value={this.state.exitLotGoogle500k}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            exitLotGoogle500k: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.exitLotGoogle500k}
+                            onValueChange={(text) => this.onValueChangeNew('exitLotGoogle500k', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`n${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1650,6 +1793,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.exitSpotify1m}
                           onValueChange={(text) => this.onValueChangeNew('exitSpotify1m', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1659,12 +1803,22 @@ class AddVisit extends Component {
                     {
                       this.state.exitSpotify1m === "Tidak" && <View id="exitLotSpotify1m" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Spotify1M?</Label>
-                        <Input
-                          value={this.state.exitLotSpotify1m}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            exitLotSpotify1m: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.exitLotSpotify1m}
+                            onValueChange={(text) => this.onValueChangeNew('exitLotSpotify1m', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`o${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1678,6 +1832,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.exitSpotify3m}
                           onValueChange={(text) => this.onValueChangeNew('exitSpotify3m', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1687,12 +1842,22 @@ class AddVisit extends Component {
                     {
                       this.state.exitSpotify3m === "Tidak" && <View id="exitLotSpotify3m" style={{ marginBottom: 15 }}>
                         <Label>Sisa gantungan Spotify3M?</Label>
-                        <Input
-                          value={this.state.exitLotSpotify3m}
-                          style={{ backgroundColor: '#F0F0F0' }}
-                          onChangeText={(text) => this.setState({
-                            exitLotSpotify3m: text
-                          })} />
+                        <Item picker>
+                          <Picker
+                            mode="dropdown"
+                            iosIcon={<Icon name="arrow-down" />}
+                            style={{ backgroundColor: '#F0F0F0' }}
+                            selectedValue={this.state.exitLotSpotify3m}
+                            onValueChange={(text) => this.onValueChangeNew('exitLotSpotify3m', text)}
+                          >
+                            <Picker.Item label="Pilih opsi anda" value="" />
+                            {
+                              this.state.number.map(num =>
+                                <Picker.Item label={`${num}`} value={num} key={`p${num}`} />
+                              )
+                            }
+                          </Picker>
+                        </Item>
                       </View>
                     }
 
@@ -1724,6 +1889,7 @@ class AddVisit extends Component {
                           selectedValue={this.state.exitPop1}
                           onValueChange={(text) => this.onValueChangeNew('exitPop1', text)}
                         >
+                          <Picker.Item label="Pilih opsi anda" value="" />
                           <Picker.Item label="Iya" value="Iya" />
                           <Picker.Item label="Tidak" value="Tidak" />
                         </Picker>
@@ -1756,6 +1922,7 @@ class AddVisit extends Component {
                               selectedValue={this.state.exitPop2}
                               onValueChange={(text) => this.onValueChangeNew('exitPop2', text)}
                             >
+                              <Picker.Item label="Pilih opsi anda" value="" />
                               <Picker.Item label="Iya" value="Iya" />
                               <Picker.Item label="Tidak" value="Tidak" />
                             </Picker>
@@ -1764,13 +1931,11 @@ class AddVisit extends Component {
                       </>
                     }
                   </Form>
-                </ScrollView>
-              </ProgressStep>
+                </ProgressStep>
 
 
-              {/* 5 */}
-              <ProgressStep label="" onSubmit={this.submit} nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle}>
-                <ScrollView>
+                {/* 5 */}
+                <ProgressStep label="" onSubmit={this.submit} nextBtnTextStyle={buttonTextStyle} previousBtnTextStyle={buttonTextStyle}>
                   <Form style={{ padding: 20, paddingTop: 0 }}>
                     <>
                       <View id="idRetailerRekap" style={{ marginBottom: 15 }}>
@@ -1795,31 +1960,11 @@ class AddVisit extends Component {
                           disabled />
                       </View>
                       <View id="dcRekap" style={{ marginBottom: 15 }}>
-                        <Label>DC/Wilayah Store</Label>
-                        {
-                          this.state.hasSelectedStore
-                            ? <Item picker>
-                              <Picker
-                                mode="dropdown"
-                                iosIcon={<Icon name="arrow-down" />}
-                                style={{ backgroundColor: '#F0F0F0' }}
-                                selectedValue={this.state.idDC}
-                                onValueChange={(text) => this.onValueChangeNew('idDC', text)}
-                                disabled
-                              >
-                                {
-                                  this.state.dataAllDC.length > 0 && this.state.dataAllDC.map(el =>
-                                    <Picker.Item label={el.DC_name} value={el.id} key={el.id} />
-                                  )
-                                }
-                              </Picker>
-                            </Item>
-                            : <Input
-                              value={this.state.idStore}
-                              style={{ backgroundColor: '#F0F0F0' }}
-                              disabled
-                            />
-                        }
+                        <Label>DC/Wilayah Store</Label><Input
+                          value={this.state.idDC}
+                          style={{ backgroundColor: '#F0F0F0' }}
+                          disabled
+                        />
                       </View>
                       <View id="cityRekap" style={{ marginBottom: 15 }}>
                         <Label>City</Label>
@@ -1837,34 +1982,38 @@ class AddVisit extends Component {
                       </View>
                       <View id="fotoTokoRekap1" style={{ marginBottom: 15 }}>
                         <Label>Image Store</Label>
-                        {
-                          this.state.img_store
-                            ? <Image source={this.state.img_store} style={{
-                              width: '100%', height: 400,
-                              resizeMode: 'stretch'
-                            }} />
-                            : <Image source={require('../asset/placeholder-take-image.png')} style={{
-                              width: '100%', height: 300,
-                              resizeMode: 'stretch'
-                            }} />
-                        }
+                        <View style={{ borderWidth: 0, borderColor: null }}>
+                          {
+                            this.state.img_store
+                              ? <Image source={this.state.img_store} style={{
+                                width: '100%', height: 400,
+                                resizeMode: 'stretch'
+                              }} />
+                              : <Image source={require('../asset/placeholder-take-image.png')} style={{
+                                width: '100%', height: 300,
+                                resizeMode: 'stretch'
+                              }} />
+                          }
+                        </View>
                       </View>
                     </>
 
                     <>
                       <View id="fotoFixInRekap" style={{ marginBottom: 15 }}>
                         <Label>Image Entry Fixture</Label>
-                        {
-                          this.state.img_fixture_in
-                            ? <Image source={this.state.img_fixture_in} style={{
-                              width: '100%', height: 400,
-                              resizeMode: 'stretch'
-                            }} />
-                            : <Image source={require('../asset/placeholder-take-image.png')} style={{
-                              width: '100%', height: 300,
-                              resizeMode: 'stretch'
-                            }} />
-                        }
+                        <View style={{ borderWidth: 0, borderColor: null }}>
+                          {
+                            this.state.img_fixture_in
+                              ? <Image source={this.state.img_fixture_in} style={{
+                                width: '100%', height: 400,
+                                resizeMode: 'stretch'
+                              }} />
+                              : <Image source={require('../asset/placeholder-take-image.png')} style={{
+                                width: '100%', height: 300,
+                                resizeMode: 'stretch'
+                              }} />
+                          }
+                        </View>
                       </View>
 
                       <View id="entryFixCompRekap" style={{ marginBottom: 15 }}>
@@ -1887,6 +2036,7 @@ class AddVisit extends Component {
                               onValueChange={(text) => this.onValueChangeNew('entryCorrectFix', text)}
                               disabled
                             >
+                              <Picker.Item label="Pilih opsi anda" value="" />
                               {
                                 this.state.dataFixtureType.map(el =>
                                   <Picker.Item label={el.fixture_type} value={el.id} key={"fix" + el.id} />
@@ -2152,7 +2302,6 @@ class AddVisit extends Component {
                         <Text style={{ color: 'white', fontWeight: 'bold' }}>Knowledge</Text>
                       </View>
 
-
                       <View id="assistNameRekap" style={{ marginBottom: 15 }}>
                         <Label>Siapa nama asisten toko ?</Label>
                         <Input
@@ -2188,20 +2337,21 @@ class AddVisit extends Component {
 
 
                     <>
-
                       <View id="fotoFixOutRekap" style={{ marginBottom: 15 }}>
                         <Label>Image Exit Fixture</Label>
-                        {
-                          this.state.img_fixture_out
-                            ? <Image source={this.state.img_fixture_out} style={{
-                              width: '100%', height: 400,
-                              resizeMode: 'stretch'
-                            }} />
-                            : <Image source={require('../asset/placeholder-take-image.png')} style={{
-                              width: '100%', height: 300,
-                              resizeMode: 'stretch'
-                            }} />
-                        }
+                        <View style={{ borderWidth: 0, borderColor: null }}>
+                          {
+                            this.state.img_fixture_out
+                              ? <Image source={this.state.img_fixture_out} style={{
+                                width: '100%', height: 400,
+                                resizeMode: 'stretch'
+                              }} />
+                              : <Image source={require('../asset/placeholder-take-image.png')} style={{
+                                width: '100%', height: 300,
+                                resizeMode: 'stretch'
+                              }} />
+                          }
+                        </View>
                       </View>
                       <View id="exitFixCompRekap" style={{ marginBottom: 15 }}>
 
@@ -2224,6 +2374,7 @@ class AddVisit extends Component {
                               onValueChange={(text) => this.onValueChangeNew('exitCorrectFix', text)}
                               disabled
                             >
+                              <Picker.Item label="Pilih opsi anda" value="" />
                               {
                                 this.state.dataFixtureType.map(el =>
                                   <Picker.Item label={el.fixture_type} value={el.id} key={"fix" + el.id} />
@@ -2488,11 +2639,10 @@ class AddVisit extends Component {
 
                     </>
                   </Form>
-                </ScrollView>
-              </ProgressStep>
+                </ProgressStep>
 
-
-            </ProgressSteps>
+              </ProgressSteps>
+            </ScrollView>
           </View>
         </View >
 
@@ -2504,14 +2654,10 @@ class AddVisit extends Component {
             {
               this.state.dataNotification.map(element =>
                 <ListItem selected key={element.id} onPress={() => this.handleOpenNotif(element.id, `${BaseURL}/${element.path_file}`)} style={{ dispaly: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
-                  {/* <Left> */}
                   <Text>{element.message}</Text>
-                  {/* </Left> */}
                   {
                     Number(element.read) === 0 && <Badge style={{ marginLeft: 10, height: 10 }} />
                   }
-                  {/* <Right>
-                  </Right> */}
                 </ListItem>
               )
             }

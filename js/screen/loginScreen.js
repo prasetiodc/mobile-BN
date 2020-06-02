@@ -135,7 +135,6 @@ class LoginScreen extends Component {
                 <Input id='email'
                   type='text'
                   placeholder='Email'
-                  // placeholderTextColor={defaultTextColor}
                   value={this.state.email}
                   onChangeText={(text) => this.setState({
                     email: text
@@ -254,4 +253,3 @@ function Login(props) {
 }
 
 export default connect(null, mapDispatchToProps)(Login)
-// export default connect(null, mapDispatchToProps)(useIsFocused(login))
